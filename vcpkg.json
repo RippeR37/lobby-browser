@@ -1,0 +1,21 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "builtin-baseline": "d7a13425bd701f4897dd5ec54a81a6882d0d21e5",
+  "dependencies": [
+    {
+      "name": "ripper37-libbase",
+      "features": [
+        "wx"
+      ]
+    },
+    {
+      "name": "wxwidgets",
+      "features": [
+        "webview"
+      ]
+    },
+    {
+      "name": "nlohmann-json"
+    }
+  ]
+}

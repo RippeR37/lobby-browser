@@ -1,0 +1,14 @@
+*.sdf
+*.opensdf
+*.pdb
+*.exe
+*.log
+*.ilk
+*.suo
+*.exp
+*.user
+
+.cache/*
+.vscode/*
+build/*
+third_party/steam/*

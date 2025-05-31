@@ -1,0 +1,7 @@
+IDI_ICON_MAIN         ICON    "app.ico"
+IDI_ICON_SEARCHING    ICON    "app_searching.ico"
+
+IDI_ICON_PAVLOV         RCDATA      "pavlov.png"
+IDI_ICON_CONTRACTORS    RCDATA      "contractors.png"
+
+#include <wx/msw/wx.rc>
