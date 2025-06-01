@@ -414,7 +414,7 @@ void PavlovGame::OnSearchLobbiesDone(
         return pavlov::PavlovPlatform::kPCVR;
       }
       if (platform_id == "1") {
-        return pavlov::PavlovPlatform::kPCVR;
+        return pavlov::PavlovPlatform::kPSVR2;
       }
       return std::nullopt;
     };
