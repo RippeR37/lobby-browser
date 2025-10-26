@@ -259,9 +259,12 @@ void WxMainWindow::Initialize(const model::AppConfig& app_config,
     // This will re-initialize it
     auto enabled_games =
         AskForEnabledGames(this, event_handler_->GetSupportedGames(), {});
-    while (enabled_games.second.empty()) {
+    while (enabled_games.first && enabled_games.second.empty()) {
       enabled_games =
           AskForEnabledGames(this, event_handler_->GetSupportedGames(), {});
+    }
+    if (!enabled_games.first) {
+      exit(0);
     }
     event_handler_->OnEnabledGamesChanged(std::move(enabled_games.second));
     return;
