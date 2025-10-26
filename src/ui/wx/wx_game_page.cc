@@ -64,6 +64,7 @@ WxGamePage::WxGamePage(
       on_autosearch_found_(std::move(on_autosearch_found)),
       main_panel_(new wxPanel(parent)),
       results_list_(nullptr),
+      players_list_(nullptr),
       game_details_notebook_(nullptr),
       filters_panel_(nullptr),
       details_panel_(nullptr),
@@ -72,16 +73,20 @@ WxGamePage::WxGamePage(
       weak_factory_(this) {
   weak_this_ = weak_factory_.GetWeakPtr();
 
-  auto* main_panel_notebook = new wxNotebook(main_panel_, wxID_ANY);
-  main_panel_notebook->SetBackgroundColour(wxColour{0xFA, 0xFA, 0xFA});
+  main_panel_notebook_ = new wxNotebook(main_panel_, wxID_ANY);
+  main_panel_notebook_->SetBackgroundColour(wxColour{0xFA, 0xFA, 0xFA});
 
   // Add pages to the inner notebook
-  main_panel_notebook->AddPage(CreateMainGamePage(main_panel_notebook),
-                               "Lobbies and Servers");
+  main_panel_notebook_->AddPage(CreateMainGamePage(main_panel_notebook_),
+                                "Lobbies and Servers");
+  if (!game_model_.results_format.players_columns.empty()) {
+    main_panel_notebook_->AddPage(CreatePlayersGamePage(main_panel_notebook_),
+                                  "Players");
+  }
 
   // Layout for the toolbook page
   auto* panelSizer = new wxBoxSizer(wxVERTICAL);
-  panelSizer->Add(main_panel_notebook, 1, wxEXPAND);
+  panelSizer->Add(main_panel_notebook_, 1, wxEXPAND);
   main_panel_->SetSizer(panelSizer);
 }
 
@@ -172,6 +177,8 @@ void WxGamePage::TriggerSearchIfPossible() {
 
   results_list_->SetBackgroundColour(wxColour{0xEE, 0xEE, 0xEE});
   results_list_->Refresh();
+  players_list_->SetBackgroundColour(wxColour{0xEE, 0xEE, 0xEE});
+  players_list_->Refresh();
 
   auto current_filters = GetCurrentGameFilters();
   event_handler_->OnSearchLobbiesAndServers(
@@ -386,6 +393,66 @@ wxPanel* WxGamePage::CreateMainGamePageDetailsDetailsPanel(wxWindow* parent) {
   return panel;
 }
 
+wxPanel* WxGamePage::CreatePlayersGamePage(wxWindow* parent) {
+  // Second page of the notebook
+  auto* game_players_page = new wxPanel(parent);
+  game_players_page->SetBackgroundColour(*wxWHITE);
+
+  // Layout for second notebook page
+  auto* game_players_page_sizer = new wxBoxSizer(wxHORIZONTAL);
+  game_players_page_sizer->Add(
+      CreateGamePagePlayersListCtrl(game_players_page,
+                                    game_model_.results_format),
+      5, wxEXPAND | wxALL, 10);
+  game_players_page->SetSizer(game_players_page_sizer);
+
+  return game_players_page;
+}
+
+wxDataViewCtrl* WxGamePage::CreateGamePagePlayersListCtrl(
+    wxWindow* parent,
+    const model::GameResultsFormat& game_results_format) {
+  auto* model = new WxResultsListModel(game_results_format.players_columns);
+  players_list_ = new wxDataViewListCtrl(parent, wxID_ANY);
+  players_list_->AssociateModel(model);
+  model->DecRef();
+
+  // Make headers bold
+  wxFont headerFont = players_list_->GetFont();
+  headerFont.MakeBold();
+  wxItemAttr headerAttr{};
+  headerAttr.SetFont(headerFont);
+  players_list_->SetHeaderAttr(headerAttr);
+
+  for (const auto& column : game_results_format.players_columns) {
+    int flags = wxDATAVIEW_COL_SORTABLE;
+    if (!column.visible) {
+      flags |= wxDATAVIEW_COL_HIDDEN;
+    }
+
+    auto alignment = [&column]() {
+      switch (column.alignment) {
+        case model::GameResultsColumnAlignment::kLeft:
+          return wxALIGN_LEFT;
+        case model::GameResultsColumnAlignment::kCenter:
+          return wxALIGN_CENTER;
+        case model::GameResultsColumnAlignment::kRight:
+          return wxALIGN_RIGHT;
+      }
+    }();
+
+    players_list_->AppendTextColumn(column.name, wxDATAVIEW_CELL_INERT,
+                                    static_cast<int>(column.proportion),
+                                    alignment, flags);
+  }
+
+  players_list_->Bind(
+      wxEVT_DATAVIEW_ITEM_ACTIVATED,
+      [=](wxDataViewEvent& event) { OnPlayersRowEntered(event); });
+
+  return players_list_;
+}
+
 void WxGamePage::OnRowEntered(wxDataViewEvent& event) {
   if (!game_model_.results_format.has_lobby_details) {
     return;
@@ -400,7 +467,11 @@ void WxGamePage::OnRowEntered(wxDataViewEvent& event) {
   wxVariant id_variant;
   results_list_->GetStore()->GetValue(id_variant, selected_row_item, 0);
 
-  selected_result_id_ = id_variant.GetString();
+  ShowLobbyDetails(id_variant.GetString());
+}
+
+void WxGamePage::ShowLobbyDetails(wxString lobby_id) {
+  selected_result_id_ = lobby_id;
   switch_to_details_tab_ = true;
 
   // Don't want for full details as we want to present something as quickly as
@@ -409,10 +480,38 @@ void WxGamePage::OnRowEntered(wxDataViewEvent& event) {
   RequestSelectedLobbyDetails(false);
 };
 
+void WxGamePage::OnPlayersRowEntered(wxDataViewEvent& event) {
+  auto selected_row_item = event.GetItem();
+  if (!selected_row_item.IsOk()) {
+    return;
+  }
+
+  // Assume first is always ID, might need to be tweaked later?
+  wxVariant lobby_id_variant;
+  players_list_->GetStore()->GetValue(lobby_id_variant, selected_row_item, 0);
+
+  const auto lobby_id = lobby_id_variant.GetString();
+
+  for (int row = 0; row < results_list_->GetItemCount(); ++row) {
+    wxVariant row_variant;
+    results_list_->GetValue(row_variant, row, 0);
+
+    if (row_variant.GetString().IsSameAs(lobby_id)) {
+      if (main_panel_notebook_->GetSelection() != 0) {
+        main_panel_notebook_->SetSelection(0);
+      }
+      ShowLobbyDetails(row_variant.GetString());
+      break;
+    }
+  }
+}
+
 void WxGamePage::OnSearchLobbiesAndServersDone(model::SearchResponse response) {
   search_button_->Enable();
   results_list_->SetBackgroundColour(wxColour{0xFF, 0xFF, 0xFF});
   results_list_->Refresh();
+  players_list_->SetBackgroundColour(wxColour{0xFF, 0xFF, 0xFF});
+  players_list_->Refresh();
 
   if (response.result != model::SearchResult::kOk) {
     LOG(ERROR) << __FUNCTION__
@@ -471,18 +570,30 @@ void WxGamePage::OnServerLobbyDetailsReceived(
 
 void WxGamePage::RefreshResultsList() {
   results_list_->DeleteAllItems();
+  players_list_->DeleteAllItems();
 
   const auto filtered_results = game_model_.results_filter_callback.Run(
       last_response_results_, GetCurrentGameFilters());
 
   // Append new results
-  for (const auto& result : filtered_results) {
+  for (const auto& result : filtered_results.lobbies) {
     std::vector<wxString> item_values;
     for (const auto& field : result.result_fields) {
       item_values.emplace_back(wxString::FromUTF8(field));
     };
 
     results_list_->AppendItem(
+        wxVector<wxVariant>{item_values.begin(), item_values.end()});
+  }
+
+  // Append new players
+  for (const auto& result : filtered_results.players) {
+    std::vector<wxString> item_values;
+    for (const auto& field : result.result_fields) {
+      item_values.emplace_back(wxString::FromUTF8(field));
+    };
+
+    players_list_->AppendItem(
         wxVector<wxVariant>{item_values.begin(), item_values.end()});
   }
 
@@ -531,7 +642,7 @@ size_t WxGamePage::ResultsMatchingAutoSearchOptions(
     return true;
   };
 
-  for (const auto& result : results) {
+  for (const auto& result : results.lobbies) {
     if (game_model_.results_format.columns.size() !=
         result.result_fields.size()) {
       LOG(ERROR) << "Result fields size mismatch: expected "

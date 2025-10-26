@@ -106,7 +106,7 @@ model::GameSearchResults FilterModelResultsFunction(
   const auto filters = pavlov::FromModel(model_filters);
   model::GameSearchResults filtered_results;
 
-  for (const auto& result : unfiltered_results) {
+  for (const auto& result : unfiltered_results.lobbies) {
     // Only filter via `filters.other`, rest is filtered on the backend side
     if (filters.others.hide_empty || filters.others.hide_full) {
       if (result.result_fields.size() > 4) {
@@ -137,9 +137,10 @@ model::GameSearchResults FilterModelResultsFunction(
       }
     }
 
-    filtered_results.emplace_back(result);
+    filtered_results.lobbies.emplace_back(result);
   }
 
+  filtered_results.players = unfiltered_results.players;
   return filtered_results;
 }
 }  // namespace
@@ -218,6 +219,71 @@ model::Game PavlovGame::GetModel() const {
                   model::GameResultsColumnAlignment::kRight,
                   model::GameResultsColumnOrdering::kNumberDivNumber,
                   true,
+              },
+              model::GameResultsColumnFormat{
+                  "Region",
+                  true,
+                  80,
+                  model::GameResultsColumnAlignment::kLeft,
+                  model::GameResultsColumnOrdering::kPingOrString,
+              },
+              model::GameResultsColumnFormat{
+                  "Platform",
+                  true,
+                  65,
+                  model::GameResultsColumnAlignment::kLeft,
+                  model::GameResultsColumnOrdering::kString,
+              },
+              model::GameResultsColumnFormat{
+                  "Flags",
+                  true,
+                  35,
+                  model::GameResultsColumnAlignment::kRight,
+                  model::GameResultsColumnOrdering::kString,
+              },
+          },
+          {
+              model::GameResultsColumnFormat{
+                  "Id",
+                  false,
+                  0,
+                  model::GameResultsColumnAlignment::kLeft,
+                  model::GameResultsColumnOrdering::kString,
+              },
+              model::GameResultsColumnFormat{
+                  "Player Name",
+                  true,
+                  200,
+                  model::GameResultsColumnAlignment::kLeft,
+                  model::GameResultsColumnOrdering::kString,
+              },
+              model::GameResultsColumnFormat{
+                  "Lobby Owner",
+                  true,
+                  200,
+                  model::GameResultsColumnAlignment::kLeft,
+                  model::GameResultsColumnOrdering::kString,
+              },
+              model::GameResultsColumnFormat{
+                  "Mode",
+                  true,
+                  200,
+                  model::GameResultsColumnAlignment::kLeft,
+                  model::GameResultsColumnOrdering::kString,
+              },
+              model::GameResultsColumnFormat{
+                  "Map",
+                  true,
+                  200,
+                  model::GameResultsColumnAlignment::kLeft,
+                  model::GameResultsColumnOrdering::kString,
+              },
+              model::GameResultsColumnFormat{
+                  "Players",
+                  true,
+                  55,
+                  model::GameResultsColumnAlignment::kRight,
+                  model::GameResultsColumnOrdering::kNumberDivNumber,
               },
               model::GameResultsColumnFormat{
                   "Region",
@@ -622,7 +688,7 @@ void PavlovGame::StoreAndConvertSearchResults(
             }
           }(result.platform);
 
-      model_response.results.emplace_back(model::GameServerLobbyResult{{
+      model_response.results.lobbies.emplace_back(model::GameServerLobbyResult{{
           result.id,
           result.gamemode,
           result.name_owner,
@@ -633,6 +699,28 @@ void PavlovGame::StoreAndConvertSearchResults(
           platform_str,
           flags,
       }});
+
+      for (const auto& member_id : result.member_ids) {
+        auto player_name = member_id;
+        if (auto player_data =
+                players_data_store_.GetCachedDataFor(member_id)) {
+          player_name = player_data->name;
+        }
+
+        model_response.results.players.emplace_back(
+            model::GameServerLobbyResult{{
+                result.id,
+                player_name,
+                result.name_owner,
+                result.gamemode,
+                result.map_label,
+                std::to_string(result.players) + "/" +
+                    std::to_string(result.max_players),
+                result.region,
+                platform_str,
+                flags,
+            }});
+      }
     }
   }
 

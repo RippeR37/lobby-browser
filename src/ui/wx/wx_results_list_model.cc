@@ -18,9 +18,17 @@ int WxResultsListModel::Compare(const wxDataViewItem& item1,
     result = wxDataViewListStore::Compare(item1, item2, column, ascending);
   } else {
     switch (formats_[column].ordering) {
-      case model::GameResultsColumnOrdering::kString:
-        result = wxDataViewListStore::Compare(item1, item2, column, ascending);
+      case model::GameResultsColumnOrdering::kString: {
+        wxVariant variant1, variant2;
+        GetValue(variant1, item1, column);
+        GetValue(variant2, item2, column);
+
+        auto value1 = variant1.GetString().Lower();
+        auto value2 = variant2.GetString().Lower();
+
+        result = value1.CmpNoCase(value2) * (ascending ? 1 : -1);
         break;
+      }
 
       case model::GameResultsColumnOrdering::kNumber: {
         wxVariant variant1, variant2;

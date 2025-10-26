@@ -50,8 +50,14 @@ class WxGamePage {
   wxPanel* CreateMainGamePageDetailsPanel(wxWindow* parent);
   wxPanel* CreateMainGamePageDetailsFilterPanel(wxWindow* parent);
   wxPanel* CreateMainGamePageDetailsDetailsPanel(wxWindow* parent);
+  wxPanel* CreatePlayersGamePage(wxWindow* parent);
+  wxDataViewCtrl* CreateGamePagePlayersListCtrl(
+      wxWindow* parent,
+      const model::GameResultsFormat& game_results_format);
 
   void OnRowEntered(wxDataViewEvent& event);
+  void ShowLobbyDetails(wxString lobby_id);
+  void OnPlayersRowEntered(wxDataViewEvent& event);
   void OnSearchLobbiesAndServersDone(model::SearchResponse response);
   void RequestSelectedLobbyDetails(bool wait_for_full_details);
   void OnServerLobbyDetailsReceived(std::string result_id,
@@ -66,7 +72,9 @@ class WxGamePage {
   base::RepeatingCallback<void(size_t)> on_autosearch_found_;
 
   wxPanel* main_panel_;
+  wxNotebook* main_panel_notebook_;
   wxDataViewListCtrl* results_list_;
+  wxDataViewListCtrl* players_list_;
   wxNotebook* game_details_notebook_;
   wxPanel* filters_panel_;
   wxWebView* details_panel_;

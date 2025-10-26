@@ -78,7 +78,7 @@ model::GameSearchResults FilterModelResultsFunction(
   const auto filters = contractors::FromModel(model_filters);
   model::GameSearchResults filtered_results;
 
-  for (const auto& result : unfiltered_results) {
+  for (const auto& result : unfiltered_results.lobbies) {
     if (result.result_fields.size() < 8) {
       continue;
     }
@@ -138,9 +138,10 @@ model::GameSearchResults FilterModelResultsFunction(
       }
     }
 
-    filtered_results.emplace_back(result);
+    filtered_results.lobbies.emplace_back(result);
   }
 
+  filtered_results.players = unfiltered_results.players;
   return filtered_results;
 }
 }  // namespace
@@ -248,6 +249,7 @@ model::Game ContractorsGame::GetModel() const {
                   model::GameResultsColumnOrdering::kString,
               },
           },
+          {},
           false,
       },
       base::BindRepeating(&FilterModelResultsFunction),
@@ -337,7 +339,7 @@ void ContractorsGame::OnSearchLobbiesResponse(
       }
     }
 
-    results.emplace_back(model::GameServerLobbyResult{{
+    results.lobbies.emplace_back(model::GameServerLobbyResult{{
         result.lobby_id,
         game_mode,
         result.match_data.game_type,

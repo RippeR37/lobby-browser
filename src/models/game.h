@@ -43,6 +43,7 @@ struct GameResultsColumnFormat {
 
 struct GameResultsFormat {
   std::vector<GameResultsColumnFormat> columns;
+  std::vector<GameResultsColumnFormat> players_columns;
   bool has_lobby_details;
 };
 
@@ -52,7 +53,13 @@ struct GameServerLobbyResult {
   std::vector<std::string> result_fields;
 };
 
-using GameSearchResults = std::vector<GameServerLobbyResult>;
+using GameSearchLobbiesResults = std::vector<GameServerLobbyResult>;
+
+struct GameSearchResults {
+  GameSearchLobbiesResults lobbies;
+  GameSearchLobbiesResults players;
+};
+
 using GameSearchResultsFilterCallback =
     base::RepeatingCallback<GameSearchResults(const GameSearchResults&,
                                               const GameFilters&)>;
