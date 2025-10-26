@@ -10,7 +10,9 @@
 namespace ui::wx {
 
 WxPresenter::WxPresenter(EventHandler* event_handler)
-    : event_handler_(event_handler), weak_factory_(this) {
+    : event_handler_(event_handler),
+      main_window_(nullptr),
+      weak_factory_(this) {
   weak_this_ = weak_factory_.GetWeakPtr();
 }
 
@@ -36,28 +38,32 @@ void WxPresenter::Initialize(model::AppConfig app_config,
     }
   }
 
-  switch (ui_config_concrete.preferences.theme) {
-    case UiTheme::Light:
-      // don't do anything?
-      break;
+  if (!main_window_) {
+    switch (ui_config_concrete.preferences.theme) {
+      case UiTheme::Light:
+        // don't do anything?
+        break;
 
-    case UiTheme::Dark:
-      wxTheApp->MSWEnableDarkMode(wxApp::DarkMode_Always,
-                                  new WxDarkModeSettings());
-      break;
+      case UiTheme::Dark:
+        wxTheApp->MSWEnableDarkMode(wxApp::DarkMode_Always,
+                                    new WxDarkModeSettings());
+        break;
 
-    case UiTheme::System:
-      wxTheApp->MSWEnableDarkMode(wxApp::DarkMode_Auto,
-                                  new WxDarkModeSettings());
-      break;
+      case UiTheme::System:
+        wxTheApp->MSWEnableDarkMode(wxApp::DarkMode_Auto,
+                                    new WxDarkModeSettings());
+        break;
+    }
+
+    auto theme_colors = GetThemeColors(ui_config_concrete.preferences.theme);
+
+    main_window_ = new WxMainWindow(
+        event_handler_,
+        base::BindRepeating(&WxPresenter::ReportMessage, weak_this_),
+        theme_colors);
   }
 
-  auto theme_colors = GetThemeColors(ui_config_concrete.preferences.theme);
-
-  main_window_ = new WxMainWindow(
-      event_handler_,
-      base::BindRepeating(&WxPresenter::ReportMessage, weak_this_),
-      theme_colors);
+  DCHECK(main_window_);
   main_window_->Initialize(app_config, ui_config, std::move(game_models));
 }
 
