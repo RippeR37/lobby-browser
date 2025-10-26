@@ -354,17 +354,20 @@ void ContractorsGame::OnSearchLobbiesResponse(
       }
     }
 
-    results.lobbies.emplace_back(model::GameServerLobbyResult{{
-        result.lobby_id,
-        game_mode,
-        result.match_data.game_type,
-        result.match_data.owner_name,
-        map,
-        std::to_string(result.match_data.current_player_num) + "/" +
-            std::to_string(result.match_data.max_player_num),
-        result.match_data.region,
-        flags,
-    }});
+    results.lobbies.emplace_back(model::GameServerLobbyResult{
+        {
+            result.lobby_id,
+            game_mode,
+            result.match_data.game_type,
+            result.match_data.owner_name,
+            map,
+            std::to_string(result.match_data.current_player_num) + "/" +
+                std::to_string(result.match_data.max_player_num),
+            result.match_data.region,
+            flags,
+        },
+        {},
+    });
   }
 
   SetStatusText("Received all results.");

@@ -77,6 +77,9 @@ class WxGamePage {
 
   void BringConnectToLobbyDialog(wxDataViewItem selected_lobby);
 
+  std::optional<std::string> GetLobbyMetadata(std::string lobby_id,
+                                              std::string key) const;
+
   wxWindow* parent_;
   EventHandler* event_handler_;
   model::Game game_model_;
@@ -86,6 +89,7 @@ class WxGamePage {
   wxPanel* main_panel_;
   wxNotebook* main_panel_notebook_;
   wxDataViewListCtrl* results_list_;
+  std::map<std::string, std::map<std::string, std::string>> lobbies_metadata_;
   wxDataViewListCtrl* players_list_;
   wxNotebook* game_details_notebook_;
   wxPanel* filters_panel_;

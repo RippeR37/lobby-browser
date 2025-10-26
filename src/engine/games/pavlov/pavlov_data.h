@@ -124,6 +124,7 @@ struct PavlovLobbyServer {
   std::string map_label;
   bool crossplatform;
   bool locked;
+  std::string pin;
   std::optional<PavlovPlatform> platform;
   std::string state;
   std::vector<std::string> member_ids;

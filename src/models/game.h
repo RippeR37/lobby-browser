@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -57,6 +58,7 @@ using GameFilters = std::vector<GameFilterGroup>;
 
 struct GameServerLobbyResult {
   std::vector<std::string> result_fields;
+  std::map<std::string, std::string> metadata;
 };
 
 using GameSearchLobbiesResults = std::vector<GameServerLobbyResult>;

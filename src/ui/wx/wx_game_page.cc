@@ -26,8 +26,10 @@ namespace {
 enum GAME_PAGE_EVENT_IDS {
   ID_Lobby_ContextMenu_ShowDetails = 1001,
   ID_Lobby_ContextMenu_Connect = 1002,
-  ID_Players_ContextMenu_AddFavorite = 1003,
-  ID_Players_ContextMenu_RemoveFavorite = 1004,
+  ID_Lobby_ContextMenu_PIN = 1003,  // noop
+
+  ID_Players_ContextMenu_AddFavorite = 1004,
+  ID_Players_ContextMenu_RemoveFavorite = 1005,
 };
 
 enum GAME_PAGE_PAGE_INDEX {
@@ -374,6 +376,14 @@ wxDataViewCtrl* WxGamePage::CreateMainGamePageLobbyListCtrl(
           if (lobby_id.find(":") == std::string::npos) {
             menu.Append(ID_Lobby_ContextMenu_Connect, "Connect to lobby");
           }
+        }
+        if (auto pin = GetLobbyMetadata(lobby_id.ToStdString(), "pin");
+            pin && !(*pin).empty()) {
+          menu.AppendSeparator();
+
+          auto* item = menu.Append(ID_Lobby_ContextMenu_PIN, "PIN: " + *pin,
+                                   "PIN for locked lobby");
+          item->Enable(false);
         }
 
         menu.Bind(wxEVT_MENU, [=, this](wxCommandEvent& evt) {
@@ -820,6 +830,7 @@ void WxGamePage::OnServerLobbyDetailsReceived(
 
 void WxGamePage::RefreshResultsList() {
   results_list_->DeleteAllItems();
+  lobbies_metadata_.clear();
 
   const auto filtered_results = game_model_.results_filter_callback.Run(
       last_response_results_, GetCurrentGameFilters());
@@ -834,6 +845,11 @@ void WxGamePage::RefreshResultsList() {
     for (const auto& field : result.result_fields) {
       item_values.emplace_back(wxString::FromUTF8(field));
     };
+
+    if (!result.result_fields.empty()) {
+      const auto lobby_id = result.result_fields.front();
+      lobbies_metadata_[lobby_id] = result.metadata;
+    }
 
     results_list_->AppendItem(
         wxVector<wxVariant>{item_values.begin(), item_values.end()});
@@ -944,6 +960,21 @@ void WxGamePage::BringConnectToLobbyDialog(wxDataViewItem selected_lobby) {
                                             create_lobby_connector_, false);
     dialog->Show();
   }
+}
+
+std::optional<std::string> WxGamePage::GetLobbyMetadata(std::string lobby_id,
+                                                        std::string key) const {
+  auto lobby_metadata = lobbies_metadata_.find(lobby_id);
+  if (lobby_metadata == lobbies_metadata_.end()) {
+    return {};
+  }
+
+  auto value = lobby_metadata->second.find(key);
+  if (value == lobby_metadata->second.end()) {
+    return {};
+  }
+
+  return value->second;
 }
 
 }  // namespace ui::wx

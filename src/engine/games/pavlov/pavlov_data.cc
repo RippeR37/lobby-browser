@@ -83,6 +83,7 @@ PavlovLobbyServer::PavlovLobbyServer(backend::eos::SearchLobbiesSession lobby)
       map_label(std::move(lobby.attributes["MAPLABEL_s"])),
       crossplatform(lobby.attributes["CROSSPLATFORM_s"] == "1"),
       locked(!lobby.attributes["PINPROTECTED_s"].empty()),
+      pin(lobby.attributes["PINPROTECTED_s"]),
       state(std::move(lobby.attributes["STATE_s"])),
       member_ids(std::move(lobby.public_players)),
       region(std::move(lobby.attributes["REGION_s"])),
@@ -110,6 +111,7 @@ PavlovLobbyServer::PavlovLobbyServer(PavlovServer server)
       map_label(std::move(server.map_label)),
       crossplatform(false),  // PC servers are not crossplatform
       locked(server.password_protected),
+      pin(),
       platform(pavlov::PavlovPlatform::kPCVR),
       state(""),
       member_ids(),

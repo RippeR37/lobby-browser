@@ -738,17 +738,21 @@ void PavlovGame::StoreAndConvertSearchResults(
             }
           }(result.platform);
 
-      model_response.results.lobbies.emplace_back(model::GameServerLobbyResult{{
-          result.id,
-          result.gamemode,
-          result.name_owner,
-          result.map_label,
-          std::to_string(result.players) + "/" +
-              std::to_string(result.max_players),
-          result.region,
-          platform_str,
-          flags,
-      }});
+      model_response.results.lobbies.emplace_back(model::GameServerLobbyResult{
+          {
+              result.id,
+              result.gamemode,
+              result.name_owner,
+              result.map_label,
+              std::to_string(result.players) + "/" +
+                  std::to_string(result.max_players),
+              result.region,
+              platform_str,
+              flags,
+          },
+          {
+              {"pin", result.pin},
+          }});
     }
   }
 
