@@ -18,7 +18,6 @@ class EventHandler {
   virtual void OnEnabledGamesChanged(
       std::vector<std::string> enabled_games) = 0;
 
-  virtual void OnSearchOnStartupChanged(bool enabled) = 0;
   virtual void OnSelectedGameChanged(std::string selected_game) = 0;
   virtual void OnSearchLobbiesAndServers(
       model::SearchRequest request,

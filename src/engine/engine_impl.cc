@@ -94,10 +94,6 @@ void AppEngineImpl::SetEnabledGames(std::vector<std::string> enabled_games) {
   presenter_->Initialize(config.app, ui_config, std::move(loaded_game_models));
 }
 
-void AppEngineImpl::SetSearchOnStartup(bool enabled) {
-  config_.GetConfig().app.startup.search_on_startup = enabled;
-}
-
 void AppEngineImpl::SetSelectedGame(std::string selected_game) {
   for (const auto& game : config_.GetConfig().app.startup.enabled_games) {
     if (game == selected_game) {

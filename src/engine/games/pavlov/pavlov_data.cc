@@ -124,7 +124,7 @@ void to_json(nlohmann::json& out, const PavlovHostModeFilters& obj) {
 void from_json(const nlohmann::json& in, PavlovHostModeFilters& obj) {
   obj.lobby = in.value("lobby", false);
   obj.server = in.value("server", false);
-  obj.crossplay = in.value("crossplay", false);
+  obj.crossplay = in.value("crossplay", true);
   obj.regions = in.value("regions", PavlovHostRegions{});
 }
 

@@ -17,12 +17,24 @@ void from_json(const nlohmann::json& in, UiInitialWindowPosition& obj) {
 void to_json(nlohmann::json& out, const UiStartupConfig& obj) {
   out = {
       {"initial_position", obj.initial_position},
+      {"search_on_startup", obj.search_on_startup},
   };
 }
 
 void from_json(const nlohmann::json& in, UiStartupConfig& obj) {
   obj.initial_position =
       in.value("initial_position", UiInitialWindowPosition{});
+  obj.search_on_startup = in.value("search_on_startup", false);
+}
+
+void to_json(nlohmann::json& out, const UiPreferencesConfig& obj) {
+  out = {
+      {"minimize_to_tray", obj.minimize_to_tray},
+  };
+}
+
+void from_json(const nlohmann::json& in, UiPreferencesConfig& obj) {
+  obj.minimize_to_tray = in.value("minimize_to_tray", true);
 }
 
 void to_json(nlohmann::json& out, const UiGameView& obj) {
@@ -50,12 +62,14 @@ void from_json(const nlohmann::json& in, UiGameConfig& obj) {
 void to_json(nlohmann::json& out, const UiConfig& obj) {
   out = {
       {"startup", obj.startup},
+      {"preferences", obj.preferences},
       {"games", obj.games},
   };
 }
 
 void from_json(const nlohmann::json& in, UiConfig& obj) {
   obj.startup = in.value("startup", UiStartupConfig{});
+  obj.preferences = in.value("preferences", UiPreferencesConfig{});
   obj.games = in.value("games", std::map<std::string, UiGameConfig>{});
 }
 

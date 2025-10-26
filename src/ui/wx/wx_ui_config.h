@@ -11,6 +11,11 @@ struct UiInitialWindowPosition {
 
 struct UiStartupConfig {
   UiInitialWindowPosition initial_position;
+  bool search_on_startup = false;
+};
+
+struct UiPreferencesConfig {
+  bool minimize_to_tray = true;
 };
 
 struct UiGameView {
@@ -24,6 +29,7 @@ struct UiGameConfig {
 
 struct UiConfig {
   UiStartupConfig startup;
+  UiPreferencesConfig preferences;
   std::map<std::string, UiGameConfig> games;
 };
 
@@ -36,6 +42,9 @@ void from_json(const nlohmann::json& in, UiInitialWindowPosition& obj);
 
 void to_json(nlohmann::json& out, const UiStartupConfig& obj);
 void from_json(const nlohmann::json& in, UiStartupConfig& obj);
+
+void to_json(nlohmann::json& out, const UiPreferencesConfig& obj);
+void from_json(const nlohmann::json& in, UiPreferencesConfig& obj);
 
 void to_json(nlohmann::json& out, const UiGameView& obj);
 void from_json(const nlohmann::json& in, UiGameView& obj);

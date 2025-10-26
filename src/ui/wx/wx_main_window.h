@@ -79,7 +79,6 @@ class WxMainWindow : public wxFrame, public WxTrayIcon::Client {
   wxToolbook* toolbook_;
   std::optional<UiConfig> config_;
 
-  wxMenuItem* menu_startup_search_;
   wxMenuItem* menu_auto_search_;
 
   std::map<std::string, std::unique_ptr<WxGamePage>> game_pages_;

@@ -161,6 +161,8 @@ target_sources(lobby_browser
     src/ui/wx/wx_game_page.h
     src/ui/wx/wx_main_window.cc
     src/ui/wx/wx_main_window.h
+    src/ui/wx/wx_preferences_dialog.cc
+    src/ui/wx/wx_preferences_dialog.h
     src/ui/wx/wx_presenter.cc
     src/ui/wx/wx_presenter.h
     src/ui/wx/wx_results_list_model.cc

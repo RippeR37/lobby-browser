@@ -18,7 +18,6 @@ class Application : public wxApp, public ui::EventHandler {
   // ui::EventHandler
   std::vector<std::string> GetSupportedGames() const override;
   void OnEnabledGamesChanged(std::vector<std::string> enabled_games) override;
-  void OnSearchOnStartupChanged(bool enabled) override;
   void OnSelectedGameChanged(std::string selected_game) override;
   void OnSearchLobbiesAndServers(model::SearchRequest request,
                                  base::OnceCallback<void(model::SearchResponse)>

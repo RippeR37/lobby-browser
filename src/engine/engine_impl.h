@@ -23,7 +23,6 @@ class AppEngineImpl : public AppEngine {
   std::string GetSelectedGame() const override;
   void Initialize() override;
   void SetEnabledGames(std::vector<std::string> enabled_games) override;
-  void SetSearchOnStartup(bool enabled) override;
   void SetSelectedGame(std::string selected_game) override;
   void SearchLobbiesAndServers(model::SearchRequest request,
                                base::OnceCallback<void(model::SearchResponse)>

@@ -17,7 +17,6 @@ class AppEngine {
 
   virtual void Initialize() = 0;
   virtual void SetEnabledGames(std::vector<std::string> enabled_games) = 0;
-  virtual void SetSearchOnStartup(bool enabled) = 0;
   virtual void SetSelectedGame(std::string selected_game) = 0;
   virtual void SearchLobbiesAndServers(
       model::SearchRequest request,

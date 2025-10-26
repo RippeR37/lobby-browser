@@ -13,6 +13,7 @@
 #include "wx/toolbook.h"
 
 #include "ui/wx/wx_auto_search_dialog.h"
+#include "ui/wx/wx_preferences_dialog.h"
 
 namespace ui::wx {
 
@@ -21,10 +22,11 @@ const auto kDefaultWindowTitle = "Lobby Browser";
 const auto kDefaultWindowSize = wxSize(1200, 800);
 
 enum MAIN_WINDOW_EVENT_IDS {
-  ID_Menu_File_SearchOnStartup = 1,
+  // ID_Menu_File_SearchOnStartup = 1,
   ID_Menu_File_AutoSearch = 2,
 
   ID_Menu_File_Settings_Games = 3,
+  ID_Menu_File_Settings_Preferences = 4,
 
   ID_Button_Search = 100,
 };
@@ -103,9 +105,6 @@ WxMainWindow::WxMainWindow(
     auto* menu_bar = new wxMenuBar();
 
     auto* application_menu = new wxMenu();
-    menu_startup_search_ = application_menu->AppendCheckItem(
-        ID_Menu_File_SearchOnStartup, "Search on startup",
-        "Performs an automatic server/lobby search on application startup");
     menu_auto_search_ = application_menu->AppendCheckItem(
         ID_Menu_File_AutoSearch, "Auto search",
         "Enables looped search for server/lobby with given criteria until any "
@@ -116,6 +115,8 @@ WxMainWindow::WxMainWindow(
     application_menu->AppendSubMenu(settings, "Settings");
     settings->Append(ID_Menu_File_Settings_Games, "Games",
                      "Configure which games to enable");
+    settings->Append(ID_Menu_File_Settings_Preferences, "Preferences",
+                     "Configure application's preferences");
 
     application_menu->AppendSeparator();
     application_menu->Append(wxID_EXIT);
@@ -127,13 +128,6 @@ WxMainWindow::WxMainWindow(
 
     SetMenuBar(menu_bar);
 
-    Bind(
-        wxEVT_MENU,
-        [=](const wxCommandEvent&) {
-          event_handler_->OnSearchOnStartupChanged(
-              menu_startup_search_->IsChecked());
-        },
-        ID_Menu_File_SearchOnStartup);
     Bind(
         wxEVT_MENU, [=](const wxCommandEvent&) { OnAutoSearchChanged(); },
         ID_Menu_File_AutoSearch);
@@ -157,6 +151,13 @@ WxMainWindow::WxMainWindow(
           }
         },
         ID_Menu_File_Settings_Games);
+    Bind(
+        wxEVT_MENU,
+        [=](const wxCommandEvent&) {
+          WxPreferencesDialog dlg(this, &*config_);
+          dlg.ShowModal();
+        },
+        ID_Menu_File_Settings_Preferences);
   }
 
   // Status bar
@@ -267,8 +268,7 @@ void WxMainWindow::Initialize(const model::AppConfig& app_config,
     }
   }
 
-  if (app_config.startup.search_on_startup) {
-    menu_startup_search_->Check();
+  if (config_->startup.search_on_startup) {
     RefreshResultsForCurrentGame();
   }
 }
@@ -391,7 +391,7 @@ void WxMainWindow::OnAutoSearchChanged() {
 }
 
 void WxMainWindow::OnMinimize(wxIconizeEvent& event) {
-  if (event.IsIconized()) {
+  if (event.IsIconized() && config_->preferences.minimize_to_tray) {
     Hide();
   }
 }

@@ -11,7 +11,6 @@ namespace model {
 struct StartupConfig {
   std::vector<std::string> enabled_games;
   std::string selected_game;
-  bool search_on_startup = false;
 };
 
 struct AppConfig {

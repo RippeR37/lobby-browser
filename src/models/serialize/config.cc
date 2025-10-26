@@ -6,14 +6,12 @@ void to_json(nlohmann::json& out, const StartupConfig& obj) {
   out = nlohmann::json{
       {"enabled_games", obj.enabled_games},
       {"selected_game", obj.selected_game},
-      {"search_on_startup", obj.search_on_startup},
   };
 }
 
 void from_json(const nlohmann::json& out, StartupConfig& obj) {
   obj.enabled_games = out.value("enabled_games", std::vector<std::string>{});
   obj.selected_game = out.value("selected_game", std::string{});
-  obj.search_on_startup = out.value("search_on_startup", false);
 }
 
 void to_json(nlohmann::json& out, const AppConfig& obj) {

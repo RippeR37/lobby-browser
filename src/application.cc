@@ -55,10 +55,6 @@ void Application::OnEnabledGamesChanged(
   engine_->SetEnabledGames(std::move(enabled_games));
 }
 
-void Application::OnSearchOnStartupChanged(bool enabled) {
-  engine_->SetSearchOnStartup(enabled);
-}
-
 void Application::OnSelectedGameChanged(std::string selected_game) {
   engine_->SetSelectedGame(std::move(selected_game));
 }
