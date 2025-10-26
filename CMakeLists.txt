@@ -183,6 +183,8 @@ target_sources(lobby_browser
     src/ui/wx/wx_results_list_model.h
     src/ui/wx/wx_search_players_results_dialog.cc
     src/ui/wx/wx_search_players_results_dialog.h
+    src/ui/wx/wx_theme.cc
+    src/ui/wx/wx_theme.h
     src/ui/wx/wx_tray_icon.cc
     src/ui/wx/wx_tray_icon.h
     src/ui/wx/wx_ui_config.cc

@@ -2,6 +2,8 @@
 
 #include "nlohmann/json.hpp"
 
+#include "ui/wx/wx_theme.h"
+
 namespace ui::wx {
 
 struct UiInitialWindowPosition {
@@ -16,6 +18,7 @@ struct UiStartupConfig {
 
 struct UiPreferencesConfig {
   bool minimize_to_tray = true;
+  UiTheme theme = UiTheme::Light;
 };
 
 struct UiGameView {

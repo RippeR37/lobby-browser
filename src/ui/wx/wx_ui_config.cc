@@ -30,11 +30,24 @@ void from_json(const nlohmann::json& in, UiStartupConfig& obj) {
 void to_json(nlohmann::json& out, const UiPreferencesConfig& obj) {
   out = {
       {"minimize_to_tray", obj.minimize_to_tray},
+      {"theme", obj.theme},
   };
 }
 
 void from_json(const nlohmann::json& in, UiPreferencesConfig& obj) {
   obj.minimize_to_tray = in.value("minimize_to_tray", true);
+  obj.theme = in.value("theme", UiTheme::Light);
+
+  // Ensure correct value is set
+  switch (obj.theme) {
+    case UiTheme::Light:
+    case UiTheme::Dark:
+    case UiTheme::System:
+      break;
+    default:
+      obj.theme = UiTheme::Light;
+      break;
+  }
 }
 
 void to_json(nlohmann::json& out, const UiGameView& obj) {

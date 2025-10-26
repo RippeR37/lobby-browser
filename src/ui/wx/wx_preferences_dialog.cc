@@ -23,6 +23,21 @@ int WxPreferencesDialog::ShowModal() {
   if (result == wxID_OK && config_) {
     config_->startup.search_on_startup = search_on_startup_->IsChecked();
     config_->preferences.minimize_to_tray = minimize_to_tray_->IsChecked();
+
+    switch (theme_choice_->GetSelection()) {
+      case 0:
+        config_->preferences.theme = UiTheme::Light;
+        break;
+      case 1:
+        config_->preferences.theme = UiTheme::Dark;
+        break;
+      case 2:
+        config_->preferences.theme = UiTheme::System;
+        break;
+      default:
+        config_->preferences.theme = UiTheme::Light;
+        break;
+    }
   }
 
   return result;
@@ -60,8 +75,8 @@ wxPanel* WxPreferencesDialog::CreateAppearancePreferencesPage(
   sizer->Add(new wxStaticText(panel, wxID_ANY, "Theme:"), 0, wxTOP | wxLEFT, 5);
   theme_choice_ =
       new wxChoice(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, themes);
-  theme_choice_->SetSelection(0);
-  theme_choice_->Disable();
+  theme_choice_->SetSelection(
+      config_ ? static_cast<int>(config_->preferences.theme) : 0);
 
   sizer->Add(theme_choice_, 0, wxALL, 5);
 

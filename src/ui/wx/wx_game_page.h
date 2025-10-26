@@ -14,6 +14,7 @@
 #include "models/game.h"
 #include "models/search.h"
 #include "ui/event_handler.h"
+#include "ui/wx/wx_theme.h"
 #include "utils/timer.h"
 
 namespace ui::wx {
@@ -28,7 +29,8 @@ class WxGamePage {
   WxGamePage(wxWindow* parent,
              EventHandler* event_handler,
              model::Game game_model,
-             base::RepeatingCallback<void(size_t)> on_autosearch_found);
+             base::RepeatingCallback<void(size_t)> on_autosearch_found,
+             WxThemeColors theme_colors);
   ~WxGamePage();
 
   wxPanel* GetMainPanel() const;
@@ -79,6 +81,7 @@ class WxGamePage {
   EventHandler* event_handler_;
   model::Game game_model_;
   base::RepeatingCallback<void(size_t)> on_autosearch_found_;
+  WxThemeColors theme_colors_;
 
   wxPanel* main_panel_;
   wxNotebook* main_panel_notebook_;

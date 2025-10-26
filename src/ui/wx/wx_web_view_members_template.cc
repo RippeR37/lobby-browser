@@ -4,8 +4,8 @@
 
 namespace ui::wx {
 
-std::string WxWebViewMembersHeader() {
-  return R"(
+std::string WxWebViewMembersHeader(UiEffectiveTheme theme) {
+  std::string result = R"(
 <!DOCTYPE html>
 <html lang='en'>
 
@@ -20,6 +20,8 @@ std::string WxWebViewMembersHeader() {
       -ms-user-select: none; /* IE 10 and IE 11 */
       user-select: none; /* Standard syntax */
     }
+
+    $EXTRASTYLES
   </style>
 </head>
 
@@ -27,6 +29,24 @@ std::string WxWebViewMembersHeader() {
   <table width='300'>
 
 )";
+
+  switch (theme) {
+    case UiEffectiveTheme::Light: {
+      util::ReplaceAll(result, "$EXTRASTYLES", "");
+    } break;
+
+    case UiEffectiveTheme::Dark: {
+      const std::string dark_mode_styles = R"(
+    body {
+      color: #cccccc;
+      background-color: #2a2a2a;
+    }
+)";
+      util::ReplaceAll(result, "$EXTRASTYLES", dark_mode_styles);
+    } break;
+  }
+
+  return result;
 }
 
 std::string WxWebViewMembersMemberRow(

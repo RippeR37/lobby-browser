@@ -33,7 +33,8 @@ class WxMainWindow : public wxFrame, public WxTrayIcon::Client {
   WxMainWindow(EventHandler* event_handler,
                base::RepeatingCallback<
                    void(Presenter::MessageType, std::string, std::string)>
-                   report_message_callback);
+                   report_message_callback,
+               WxThemeColors theme_colors);
   ~WxMainWindow() override;
 
   // WxTrayIcon::Client
@@ -80,6 +81,7 @@ class WxMainWindow : public wxFrame, public WxTrayIcon::Client {
   base::RepeatingCallback<
       void(Presenter::MessageType, std::string, std::string)>
       report_message_callback_;
+  WxThemeColors theme_colors_;
   std::unique_ptr<WxTrayIcon> tray_icon_;
 
   wxToolbook* toolbook_;

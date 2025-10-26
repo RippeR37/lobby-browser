@@ -15,6 +15,7 @@
 #include "ui/wx/wx_lobby_connect_dialog.h"
 #include "ui/wx/wx_players_list_model.h"
 #include "ui/wx/wx_results_list_model.h"
+#include "ui/wx/wx_theme.h"
 #include "ui/wx/wx_web_view_members_template.h"
 #include "utils/strings.h"
 
@@ -99,11 +100,13 @@ WxGamePage::WxGamePage(
     wxWindow* parent,
     EventHandler* event_handler,
     model::Game game_model,
-    base::RepeatingCallback<void(size_t)> on_autosearch_found)
+    base::RepeatingCallback<void(size_t)> on_autosearch_found,
+    WxThemeColors theme_colors)
     : parent_(parent),
       event_handler_(event_handler),
       game_model_(std::move(game_model)),
       on_autosearch_found_(std::move(on_autosearch_found)),
+      theme_colors_(std::move(theme_colors)),
       main_panel_(new wxPanel(parent)),
       results_list_(nullptr),
       players_list_(nullptr),
@@ -116,7 +119,7 @@ WxGamePage::WxGamePage(
   weak_this_ = weak_factory_.GetWeakPtr();
 
   main_panel_notebook_ = new wxNotebook(main_panel_, wxID_ANY);
-  main_panel_notebook_->SetBackgroundColour(wxColour{0xFA, 0xFA, 0xFA});
+  main_panel_notebook_->SetBackgroundColour(theme_colors_.GamePanelBg);
 
   // Add pages to the inner notebook
   main_panel_notebook_->AddPage(CreateMainGamePage(main_panel_notebook_),
@@ -227,9 +230,9 @@ void WxGamePage::TriggerSearchIfPossible() {
 
   search_button_->Disable();
 
-  results_list_->SetBackgroundColour(wxColour{0xEE, 0xEE, 0xEE});
+  results_list_->SetBackgroundColour(theme_colors_.ListLoadingBg);
   results_list_->Refresh();
-  players_list_->SetBackgroundColour(wxColour{0xEE, 0xEE, 0xEE});
+  players_list_->SetBackgroundColour(theme_colors_.ListLoadingBg);
   players_list_->Refresh();
 
   auto current_filters = GetCurrentGameFilters();
@@ -289,7 +292,7 @@ void WxGamePage::OnRestoreFromTray() {
 wxPanel* WxGamePage::CreateMainGamePage(wxWindow* parent) {
   // First page of the notebook
   auto* main_game_page = new wxPanel(parent);
-  main_game_page->SetBackgroundColour(*wxWHITE);
+  main_game_page->SetBackgroundColour(theme_colors_.GamePageBg);
 
   // Layout for first notebook page
   auto* main_game_page_sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -388,7 +391,7 @@ wxPanel* WxGamePage::CreateMainGamePageDetailsPanel(wxWindow* parent) {
 
   // Notebook
   game_details_notebook_ = new wxNotebook(details_panel, wxID_ANY);
-  game_details_notebook_->SetBackgroundColour(*wxWHITE);
+  game_details_notebook_->SetBackgroundColour(theme_colors_.GameDetailsBg);
   details_panel_sizer->Add(game_details_notebook_, 20, wxEXPAND);
 
   // IMPORTANT: Update `OnRestoreFromTray()` if the order changes
@@ -506,7 +509,7 @@ wxPanel* WxGamePage::CreateMainGamePageDetailsDetailsPanel(wxWindow* parent) {
 wxPanel* WxGamePage::CreatePlayersGamePage(wxWindow* parent) {
   // Second page of the notebook
   auto* game_players_page = new wxPanel(parent);
-  game_players_page->SetBackgroundColour(*wxWHITE);
+  game_players_page->SetBackgroundColour(theme_colors_.GamePlayersPageBg);
 
   // Layout for second notebook page
   auto* game_players_page_sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -721,7 +724,7 @@ void WxGamePage::OnPlayersRowEntered(wxDataViewEvent& event) {
 
 void WxGamePage::OnSearchLobbiesAndServersDone(model::SearchResponse response) {
   search_button_->Enable();
-  results_list_->SetBackgroundColour(wxColour{0xFF, 0xFF, 0xFF});
+  results_list_->SetBackgroundColour(theme_colors_.ListLoadedBg);
   results_list_->Refresh();
 
   if (response.result != model::SearchResult::kOk) {
@@ -742,7 +745,7 @@ void WxGamePage::OnSearchLobbiesAndServersDone(model::SearchResponse response) {
 }
 
 void WxGamePage::OnSearchLobbiesPlayersDone(model::GamePlayersResults players) {
-  players_list_->SetBackgroundColour(wxColour{0xFF, 0xFF, 0xFF});
+  players_list_->SetBackgroundColour(theme_colors_.ListLoadedBg);
   players_list_->DeleteAllItems();
   players_list_->Refresh();
 
@@ -797,7 +800,7 @@ void WxGamePage::OnServerLobbyDetailsReceived(
     switch_to_details_tab_ = false;
   }
 
-  auto html_content = WxWebViewMembersHeader();
+  auto html_content = WxWebViewMembersHeader(theme_colors_.effective_theme);
   for (const auto& member : details.members) {
     html_content += WxWebViewMembersMemberRow(member);
   }

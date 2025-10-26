@@ -15,6 +15,7 @@
 #include "ui/wx/wx_auto_search_dialog.h"
 #include "ui/wx/wx_preferences_dialog.h"
 #include "ui/wx/wx_search_players_results_dialog.h"
+#include "ui/wx/wx_theme.h"
 
 namespace ui::wx {
 
@@ -82,7 +83,8 @@ WxMainWindow::WxMainWindow(
     EventHandler* event_handler,
     base::RepeatingCallback<void(Presenter::MessageType,
                                  std::string,
-                                 std::string)> report_message_callback)
+                                 std::string)> report_message_callback,
+    WxThemeColors theme_colors)
     : wxFrame(nullptr,
               wxID_ANY,
               kDefaultWindowTitle,
@@ -91,13 +93,14 @@ WxMainWindow::WxMainWindow(
               wxDEFAULT_FRAME_STYLE & ~(wxMAXIMIZE_BOX | wxRESIZE_BORDER)),
       event_handler_(event_handler),
       report_message_callback_(std::move(report_message_callback)),
+      theme_colors_(std::move(theme_colors)),
       toolbook_(nullptr),
       weak_factory_(this) {
   weak_this_ = weak_factory_.GetWeakPtr();
 
   SetIcon(wxICON(IDI_ICON_MAIN));
   SetSizeHints(kDefaultWindowSize, kDefaultWindowSize);
-  SetBackgroundColour(wxColour{0xFA, 0xFA, 0xFA});
+  SetBackgroundColour(theme_colors_.MainWindowBg);
 
   // Tray icon
   tray_icon_ = std::make_unique<WxTrayIcon>(this);
@@ -451,7 +454,7 @@ void WxMainWindow::OnKeyDown(wxKeyEvent& event) {
 
 void WxMainWindow::CreateMainPanel() {
   auto* main_panel = new wxPanel(this);
-  main_panel->SetBackgroundColour(wxColour{0xFA, 0xFA, 0xFA});
+  main_panel->SetBackgroundColour(theme_colors_.MainPanelBg);
 
   // Setup wxToolbook
   toolbook_ = new wxToolbook(main_panel, wxID_ANY, wxDefaultPosition,
@@ -464,15 +467,16 @@ void WxMainWindow::CreateMainPanel() {
   main_panel->SetSizer(mainSizer);
 
   // Color
-  toolbook_->SetBackgroundColour(wxColour{0xFA, 0xFA, 0xFA});
-  toolbook_->GetToolBar()->SetBackgroundColour(wxColour{0xFA, 0xFA, 0xFA});
+  toolbook_->SetBackgroundColour(theme_colors_.GameToolbookBg);
+  toolbook_->GetToolBar()->SetBackgroundColour(theme_colors_.GameToolbookBg);
 }
 
 wxPanel* WxMainWindow::CreateToolbookGamePage(wxWindow* parent,
                                               const model::Game& game) {
   game_pages_[game.name] = std::make_unique<WxGamePage>(
       parent, event_handler_, game,
-      base::BindRepeating(&WxMainWindow::OnAutoSearchDone, weak_this_));
+      base::BindRepeating(&WxMainWindow::OnAutoSearchDone, weak_this_),
+      theme_colors_);
   auto* result = game_pages_[game.name]->GetMainPanel();
   return result;
 }
