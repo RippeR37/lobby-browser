@@ -184,6 +184,12 @@ model::Game ContractorsGame::GetModel() const {
   return model::Game{
       "Contractors",
       "IDI_ICON_CONTRACTORS",
+      model::GameFeatures{
+          .has_lobby_details = false,
+          .search_players = false,
+          .list_players = false,
+          .connect_to_lobby = false,
+      },
       ToModel(config_.filters),
       model::GameResultsFormat{
           {
@@ -249,7 +255,6 @@ model::Game ContractorsGame::GetModel() const {
               },
           },
           {},
-          false,
       },
       base::BindRepeating(&FilterModelResultsFunction),
   };
@@ -375,8 +380,8 @@ void ContractorsGame::OnSearchLobbiesResponse(
   }();
 
   std::move(on_done_callback)
-      .Run(model::SearchResponse{search_result, result.error,
-                                 std::move(results)});
+      .Run(model::SearchResponse{
+          search_result, result.error, std::move(results), {}});
 }
 
 }  // namespace engine::game

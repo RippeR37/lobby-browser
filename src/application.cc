@@ -3,6 +3,7 @@
 #include "base/init.h"
 #include "base/logging.h"
 #include "base/net/init.h"
+#include "ixwebsocket/IXNetSystem.h"
 
 #include "engine/engine_impl.h"
 #include "ui/wx/wx_presenter.h"
@@ -11,6 +12,7 @@
 bool Application::OnInit() {
   base::Initialize(argc, argv, {});
   base::net::Initialize({});
+  ix::initNetSystem();
 
   message_loop_attachment_ =
       std::make_unique<base::wx::WxMessageLoopAttachment>(this);
@@ -41,6 +43,7 @@ int Application::OnExit() {
 
   message_loop_attachment_.reset();
 
+  ix::uninitNetSystem();
   base::net::Deinitialize();
   base::Deinitialize();
   return 0;

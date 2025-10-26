@@ -45,6 +45,7 @@ class WxMainWindow : public wxFrame, public WxTrayIcon::Client {
                   const model::UiConfig& ui_config,
                   std::vector<model::Game> game_models);
   void RefreshResultsForCurrentGame();
+  void ConnectToCurrentlySelectedLobby();
 
  private:
   void UpdateConfig();

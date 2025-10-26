@@ -52,6 +52,8 @@ struct SearchLobbiesSession {
 struct SearchLobbiesResponse {
   std::vector<SearchLobbiesSession> sessions;
   int64_t count;
+
+  std::string todo_auth_token;
 };
 
 //
@@ -96,6 +98,27 @@ struct SearchUsersPlayer {
 
 struct SearchUsersResponse {
   std::vector<SearchUsersPlayer> players;
+};
+
+//
+// LobbyConnector
+//
+
+struct WsJoinRequest {
+  std::string request_id;
+  std::string lobby_id;
+  bool allow_crossplay;
+};
+
+struct WsErrorResponse {
+  std::string request_id;
+  int status_code;
+  std::string error_code;
+  std::string error_message;
+};
+
+struct WsLobbyInfoResponse {
+  std::string request_id;
 };
 
 }  // namespace engine::backend::eos

@@ -8,6 +8,13 @@
 
 namespace model {
 
+struct GameFeatures {
+  bool has_lobby_details;
+  bool search_players;
+  bool list_players;
+  bool connect_to_lobby;
+};
+
 struct GameFilterOption {
   std::string name;
   bool enabled;
@@ -44,7 +51,6 @@ struct GameResultsColumnFormat {
 struct GameResultsFormat {
   std::vector<GameResultsColumnFormat> columns;
   std::vector<GameResultsColumnFormat> players_columns;
-  bool has_lobby_details;
 };
 
 using GameFilters = std::vector<GameFilterGroup>;
@@ -72,6 +78,7 @@ using GameSearchResultsFilterCallback =
 struct Game {
   std::string name;
   std::string icon_path;
+  GameFeatures features;
   GameFilters filter_groups;
   GameResultsFormat results_format;
   GameSearchResultsFilterCallback results_filter_callback;

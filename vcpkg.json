@@ -16,6 +16,9 @@
     },
     {
       "name": "nlohmann-json"
+    },
+    {
+      "name": "ixwebsocket"
     }
   ]
 }

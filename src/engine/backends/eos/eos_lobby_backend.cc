@@ -6,6 +6,7 @@
 #include "nlohmann/json.hpp"
 
 #include "engine/backends/eos/eos_data_serialize.h"
+#include "engine/backends/eos/eos_lobby_connector.h"
 #include "utils/vectors.h"
 
 namespace engine::backend {
@@ -147,6 +148,22 @@ void EosLobbyBackend::SearchUsers(
   }
 
   DoSearchUsers(json_request.dump(), std::move(on_done_callback), {});
+}
+
+model::LobbyConnectorCreateCallback
+EosLobbyBackend::GetLobbyConnectorCreateCallback() {
+  return base::BindRepeating(
+      [](AuthToken<std::string> access_token, std::string lobby_id,
+         base::RepeatingCallback<void(std::string)> status_update_cb,
+         base::RepeatingCallback<void(int)> progress_update_cb,
+         base::OnceCallback<void(bool)> on_done_callback)
+          -> std::unique_ptr<model::LobbyConnector> {
+        return std::make_unique<EosLobbyConnector>(
+            std::move(access_token), std::move(lobby_id),
+            std::move(status_update_cb), std::move(progress_update_cb),
+            std::move(on_done_callback));
+      },
+      access_token_);
 }
 
 void EosLobbyBackend::StartAuthenticateViaSteam() {
@@ -348,6 +365,7 @@ void EosLobbyBackend::OnSearchLobbiesResponse(
   try {
     nlohmann::json json_response = nlohmann::json::parse(response.data);
     eos::SearchLobbiesResponse eos_response = json_response;
+    eos_response.todo_auth_token = access_token_.GetToken().value_or("");
     std::move(on_done_callback)
         .Run(Result{Result::Status::kOk, ""}, std::move(eos_response));
   } catch (const std::exception& e) {

@@ -106,4 +106,31 @@ void from_json(const nlohmann::json& in, SearchUsersResponse& obj) {
   obj.players = in.value("players", std::vector<SearchUsersPlayer>{});
 }
 
+void to_json(nlohmann::json& out, const WsJoinRequest& obj) {
+  out = {
+      {"name", "join"},
+      {"requestId", obj.request_id},
+      {"payload",
+       {
+           {"lobbyId", obj.lobby_id},
+           {"allowCrossplay", obj.allow_crossplay},
+       }},
+  };
+}
+
+void from_json(const nlohmann::json& in, WsErrorResponse& obj) {
+  obj.request_id = in.value("requestId", "");
+
+  if (in.contains("payload") && in["payload"].is_object()) {
+    const auto& payload = in["payload"];
+    obj.status_code = payload.value("statusCode", -1);
+    obj.error_code = payload.value("errorCode", "");
+    obj.error_message = payload.value("errorMessage", "");
+  }
+}
+
+void from_json(const nlohmann::json& in, WsLobbyInfoResponse& obj) {
+  obj.request_id = in.value("requestId", "");
+}
+
 }  // namespace engine::backend::eos

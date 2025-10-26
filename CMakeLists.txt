@@ -22,6 +22,7 @@ project(lobby_browser VERSION 1.0 LANGUAGES CXX)
 find_package(libbase CONFIG REQUIRED net wx)
 find_package(wxWidgets CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(ixwebsocket CONFIG REQUIRED)
 
 # Steamworks
 set(STEAMWORKS_SDK_DIR "third_party/steam")
@@ -88,6 +89,7 @@ target_link_libraries(lobby_browser
     wx::webview
     wx::propgrid
     nlohmann_json::nlohmann_json
+    ixwebsocket::ixwebsocket
     steam_api64
 )
 
@@ -106,6 +108,8 @@ target_sources(lobby_browser
     src/engine/backends/eos/eos_data.h
     src/engine/backends/eos/eos_lobby_backend.cc
     src/engine/backends/eos/eos_lobby_backend.h
+    src/engine/backends/eos/eos_lobby_connector.cc
+    src/engine/backends/eos/eos_lobby_connector.h
     src/engine/backends/modio/modio_data.h
     src/engine/backends/modio/modio_data_serialize.cc
     src/engine/backends/modio/modio_data_serialize.h
@@ -148,6 +152,7 @@ target_sources(lobby_browser
     src/models/auth.h
     src/models/config.h
     src/models/game.h
+    src/models/lobby_connector.h
     src/models/search.h
     src/models/serialize/config.cc
     src/models/serialize/config.h
@@ -160,6 +165,8 @@ target_sources(lobby_browser
     src/ui/wx/wx_auto_search_dialog.h
     src/ui/wx/wx_game_page.cc
     src/ui/wx/wx_game_page.h
+    src/ui/wx/wx_lobby_connect_dialog.cc
+    src/ui/wx/wx_lobby_connect_dialog.h
     src/ui/wx/wx_main_window.cc
     src/ui/wx/wx_main_window.h
     src/ui/wx/wx_preferences_dialog.cc

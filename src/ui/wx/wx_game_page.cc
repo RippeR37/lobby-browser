@@ -4,12 +4,15 @@
 #include "wx/bmpbuttn.h"
 #include "wx/checkbox.h"
 #include "wx/itemattr.h"
+#include "wx/menu.h"
+#include "wx/menuitem.h"
 #include "wx/sizer.h"
 #include "wx/statbox.h"
 #include "wx/stattext.h"
 #include "wx/textctrl.h"
 #include "wx/utils.h"
 
+#include "ui/wx/wx_lobby_connect_dialog.h"
 #include "ui/wx/wx_results_list_model.h"
 #include "ui/wx/wx_web_view_members_template.h"
 #include "utils/strings.h"
@@ -17,6 +20,11 @@
 namespace ui::wx {
 
 namespace {
+
+enum GAME_PAGE_EVENT_IDS {
+  ID_Lobby_ContextMenu_ShowDetails = 1001,
+  ID_Lobby_ContextMenu_Connect = 1002,
+};
 
 bool MatchFilterField(std::string value,
                       std::string filter,
@@ -59,7 +67,8 @@ WxGamePage::WxGamePage(
     EventHandler* event_handler,
     model::Game game_model,
     base::RepeatingCallback<void(size_t)> on_autosearch_found)
-    : event_handler_(event_handler),
+    : parent_(parent),
+      event_handler_(event_handler),
       game_model_(std::move(game_model)),
       on_autosearch_found_(std::move(on_autosearch_found)),
       main_panel_(new wxPanel(parent)),
@@ -190,6 +199,17 @@ void WxGamePage::TriggerSearchIfPossible() {
       base::BindOnce(&WxGamePage::OnSearchLobbiesAndServersDone, weak_this_));
 }
 
+void WxGamePage::ConnectToCurrentlySelectedLobbyIfPossible() {
+  if (!game_model_.features.connect_to_lobby) {
+    return;
+  }
+
+  auto selected_lobby = results_list_->GetCurrentItem();
+  if (selected_lobby.IsOk()) {
+    BringConnectToLobbyDialog(selected_lobby);
+  }
+}
+
 void WxGamePage::StartAutoSearch(
     std::map<std::string, std::string> autosearch_options) {
   autosearch_options_ = std::move(autosearch_options);
@@ -205,7 +225,7 @@ void WxGamePage::StopAutoSearch() {
 }
 
 void WxGamePage::OnRestoreFromTray() {
-  if (game_model_.results_format.has_lobby_details) {
+  if (game_model_.features.has_lobby_details) {
     const auto selected_page = game_details_notebook_->GetSelection();
 
     game_details_notebook_->RemovePage(1);
@@ -280,6 +300,40 @@ wxDataViewCtrl* WxGamePage::CreateMainGamePageLobbyListCtrl(
   results_list_->Bind(
       wxEVT_DATAVIEW_ITEM_ACTIVATED,
       [=, this](wxDataViewEvent& event) { OnRowEntered(event); });
+  results_list_->Bind(
+      wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, [=, this](wxDataViewEvent& event) {
+        wxDataViewItem item = event.GetItem();
+        if (!item.IsOk())
+          return;
+
+        if (!game_model_.features.has_lobby_details &&
+            !game_model_.features.connect_to_lobby) {
+          return;
+        }
+
+        int row = results_list_->ItemToRow(item);
+        wxVariant value;
+        results_list_->GetValue(value, row, 0);
+        wxString lobby_id = value.GetString();
+
+        wxMenu menu;
+
+        if (game_model_.features.has_lobby_details) {
+          menu.Append(ID_Lobby_ContextMenu_ShowDetails, "Show lobby details");
+        }
+        if (game_model_.features.connect_to_lobby) {
+          // TODO: hack, filters out Palov servers
+          if (lobby_id.find(":") == std::string::npos) {
+            menu.Append(ID_Lobby_ContextMenu_Connect, "Connect to lobby");
+          }
+        }
+
+        menu.Bind(wxEVT_MENU, [=, this](wxCommandEvent& evt) {
+          OnRowContextMenuSelected(item, evt.GetId());
+        });
+
+        parent_->PopupMenu(&menu);
+      });
 
   return results_list_;
 }
@@ -297,7 +351,7 @@ wxPanel* WxGamePage::CreateMainGamePageDetailsPanel(wxWindow* parent) {
   // IMPORTANT: Update `OnRestoreFromTray()` if the order changes
   game_details_notebook_->AddPage(
       CreateMainGamePageDetailsFilterPanel(game_details_notebook_), "Filters");
-  if (game_model_.results_format.has_lobby_details) {
+  if (game_model_.features.has_lobby_details) {
     game_details_notebook_->AddPage(
         CreateMainGamePageDetailsDetailsPanel(game_details_notebook_),
         "Details");
@@ -457,7 +511,7 @@ wxDataViewCtrl* WxGamePage::CreateGamePagePlayersListCtrl(
 }
 
 void WxGamePage::OnRowEntered(wxDataViewEvent& event) {
-  if (!game_model_.results_format.has_lobby_details) {
+  if (!game_model_.features.has_lobby_details) {
     return;
   }
 
@@ -471,6 +525,23 @@ void WxGamePage::OnRowEntered(wxDataViewEvent& event) {
   results_list_->GetStore()->GetValue(id_variant, selected_row_item, 0);
 
   ShowLobbyDetails(id_variant.GetString());
+}
+
+void WxGamePage::OnRowContextMenuSelected(wxDataViewItem selected_lobby,
+                                          int event_id) {
+  switch (event_id) {
+    case ID_Lobby_ContextMenu_ShowDetails: {
+      wxVariant id_variant;
+      results_list_->GetStore()->GetValue(id_variant, selected_lobby, 0);
+      ShowLobbyDetails(id_variant.GetString());
+      break;
+    }
+
+    case ID_Lobby_ContextMenu_Connect: {
+      BringConnectToLobbyDialog(selected_lobby);
+      break;
+    }
+  }
 }
 
 void WxGamePage::ShowLobbyDetails(wxString lobby_id) {
@@ -525,6 +596,7 @@ void WxGamePage::OnSearchLobbiesAndServersDone(model::SearchResponse response) {
   }
 
   last_response_results_ = std::move(response.results);
+  create_lobby_connector_ = std::move(response.create_lobby_connector);
   RefreshResultsList();
 
   if (selected_result_id_) {
@@ -686,6 +758,23 @@ bool WxGamePage::ReselectLastSelectedRow() {
   }
 
   return false;
+}
+
+void WxGamePage::BringConnectToLobbyDialog(wxDataViewItem selected_lobby) {
+  if (!create_lobby_connector_) {
+    return;
+  }
+
+  int row = results_list_->ItemToRow(selected_lobby);
+  wxVariant value;
+
+  results_list_->GetValue(value, row, 0);
+  auto lobby_id = value.GetString().ToStdString();
+  results_list_->GetValue(value, row, 2);
+  auto owner = value.GetString().ToStdString();
+
+  WxLobbyConnectDialog{parent_, lobby_id, owner, create_lobby_connector_}
+      .ShowModal();
 }
 
 }  // namespace ui::wx

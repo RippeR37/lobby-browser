@@ -7,6 +7,7 @@
 #include "base/callback.h"
 
 #include "models/game.h"
+#include "models/lobby_connector.h"
 
 namespace model {
 
@@ -27,6 +28,11 @@ struct SearchResponse {
   SearchResult result;
   std::string error;
   GameSearchResults results;
+
+  // This creates a lobby connector for a given lobby ID (or nullptr if not
+  // possible to connect to a given lobby). Callbacks are for updating status
+  // text, progress ([0-100]) and on finished.
+  LobbyConnectorCreateCallback create_lobby_connector;
 };
 
 struct SearchDetailsRequest {

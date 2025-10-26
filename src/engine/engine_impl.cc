@@ -118,7 +118,7 @@ void AppEngineImpl::SearchLobbiesAndServers(
                               "");
     std::move(on_done_callback)
         .Run(model::SearchResponse{
-            model::SearchResult::kError, "Game not found", {}});
+            model::SearchResult::kError, "Game not found", {}, {}});
     return;
   }
 

@@ -13,6 +13,7 @@
 #include "engine/backends/result.h"
 #include "engine/backends/steam/steam_auth_backend.h"
 #include "models/auth.h"
+#include "models/lobby_connector.h"
 
 namespace engine::backend {
 
@@ -35,6 +36,8 @@ class EosLobbyBackend : public LobbyBackend {
   void SearchUsers(eos::SearchUsersRequest request,
                    base::OnceCallback<void(Result, eos::SearchUsersResponse)>
                        on_done_callback);
+
+  model::LobbyConnectorCreateCallback GetLobbyConnectorCreateCallback();
 
  private:
   void StartAuthenticateViaSteam();

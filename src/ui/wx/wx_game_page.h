@@ -37,6 +37,7 @@ class WxGamePage {
   ColumnSortInfo GetColumnSortInfo() const;
   void SetColumnSorting(ColumnSortInfo column_sorting);
   void TriggerSearchIfPossible();
+  void ConnectToCurrentlySelectedLobbyIfPossible();
   void StartAutoSearch(std::map<std::string, std::string> autosearch_options);
   void StopAutoSearch();
 
@@ -56,6 +57,7 @@ class WxGamePage {
       const model::GameResultsFormat& game_results_format);
 
   void OnRowEntered(wxDataViewEvent& event);
+  void OnRowContextMenuSelected(wxDataViewItem selected_lobby, int event_id);
   void ShowLobbyDetails(wxString lobby_id);
   void OnPlayersRowEntered(wxDataViewEvent& event);
   void OnSearchLobbiesAndServersDone(model::SearchResponse response);
@@ -68,6 +70,9 @@ class WxGamePage {
       const model::GameSearchResults& results) const;
   bool ReselectLastSelectedRow();
 
+  void BringConnectToLobbyDialog(wxDataViewItem selected_lobby);
+
+  wxWindow* parent_;
   EventHandler* event_handler_;
   model::Game game_model_;
   base::RepeatingCallback<void(size_t)> on_autosearch_found_;
@@ -82,6 +87,7 @@ class WxGamePage {
   wxButton* search_button_;
 
   model::GameSearchResults last_response_results_;
+  model::LobbyConnectorCreateCallback create_lobby_connector_;
   std::optional<std::string> selected_result_id_;
   std::optional<model::SearchDetailsResponse> last_search_details_;
   bool switch_to_details_tab_;

@@ -197,6 +197,12 @@ model::Game PavlovGame::GetModel() const {
   return model::Game{
       "Pavlov",
       "IDI_ICON_PAVLOV",
+      model::GameFeatures{
+          .has_lobby_details = true,
+          .search_players = true,
+          .list_players = true,
+          .connect_to_lobby = true,
+      },
       ToModel(config_.filters),
       model::GameResultsFormat{
           {
@@ -333,7 +339,6 @@ model::Game PavlovGame::GetModel() const {
                   model::GameResultsColumnOrdering::kString,
               },
           },
-          true,
       },
       base::BindRepeating(&FilterModelResultsFunction),
   };
@@ -539,6 +544,8 @@ void PavlovGame::OnSearchLobbiesDone(
     UpdateGameVersionFromLobbySession(response.sessions.front());
   }
 
+  todo_auth_token_ = response.todo_auth_token;
+
   std::vector<pavlov::PavlovLobbyServer> results;
   for (auto& lobby : response.sessions) {
     results.push_back(pavlov::PavlovLobbyServer{lobby});
@@ -695,6 +702,8 @@ void PavlovGame::StoreAndConvertSearchResults(
   }
 
   model::SearchResponse model_response;
+  model_response.create_lobby_connector =
+      lobby_backend_->GetLobbyConnectorCreateCallback();
   model_response.result =
       response.success ? model::SearchResult::kOk : model::SearchResult::kError;
   model_response.error = response.error;

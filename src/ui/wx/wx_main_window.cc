@@ -26,11 +26,12 @@ enum MAIN_WINDOW_EVENT_IDS {
   ID_Menu_File_AutoSearch = 1,
   ID_Menu_File_SearchPlayers = 2,
   ID_Menu_File_Refresh = 3,
+  ID_Menu_File_ConnectToLobby = 4,
 
-  ID_Menu_File_Settings_Games = 4,
-  ID_Menu_File_Settings_Preferences = 5,
+  ID_Menu_File_Settings_Games = 100,
+  ID_Menu_File_Settings_Preferences = 1001,
 
-  ID_Button_Search = 100,
+  ID_Button_Search = 200,
 };
 }  // namespace
 
@@ -115,6 +116,9 @@ WxMainWindow::WxMainWindow(
                              "Search players in current game");
     application_menu->Append(ID_Menu_File_Refresh, "Refresh\tF5",
                              "Search lobbies and servers for current game");
+    application_menu->Append(ID_Menu_File_ConnectToLobby,
+                             "Connect to lobby\tF8",
+                             "Connect to currently selected lobby");
     application_menu->AppendSeparator();
 
     auto* settings = new wxMenu();
@@ -141,6 +145,10 @@ WxMainWindow::WxMainWindow(
         wxEVT_MENU,
         [=, this](const wxCommandEvent&) { RefreshResultsForCurrentGame(); },
         ID_Menu_File_Refresh);
+    Bind(
+        wxEVT_MENU,
+        [=, this](wxCommandEvent&) { ConnectToCurrentlySelectedLobby(); },
+        ID_Menu_File_ConnectToLobby);
     Bind(
         wxEVT_MENU,
         [=, this](const wxCommandEvent&) { BringPlayerSearchDialog(); },
@@ -293,6 +301,12 @@ void WxMainWindow::Initialize(const model::AppConfig& app_config,
 void WxMainWindow::RefreshResultsForCurrentGame() {
   if (auto* game_page = GetCurrentGamePage()) {
     game_page->TriggerSearchIfPossible();
+  }
+}
+
+void WxMainWindow::ConnectToCurrentlySelectedLobby() {
+  if (auto* game_page = GetCurrentGamePage()) {
+    game_page->ConnectToCurrentlySelectedLobbyIfPossible();
   }
 }
 

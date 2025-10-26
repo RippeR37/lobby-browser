@@ -93,6 +93,8 @@ class PavlovGame : public BaseGame {
 
   bool IsPlayerInFavorties(const std::string& player_id) const;
 
+  std::string todo_auth_token_;
+
   pavlov::PavlovConfig config_;
   std::unique_ptr<backend::EosLobbyBackend> lobby_backend_;
   pavlov::PavlovPlayersDataStore players_data_store_;
