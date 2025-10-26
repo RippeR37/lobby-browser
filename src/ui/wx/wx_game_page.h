@@ -59,6 +59,7 @@ class WxGamePage {
   void ShowLobbyDetails(wxString lobby_id);
   void OnPlayersRowEntered(wxDataViewEvent& event);
   void OnSearchLobbiesAndServersDone(model::SearchResponse response);
+  void OnSearchLobbiesPlayersDone(model::GamePlayersResults players);
   void RequestSelectedLobbyDetails(bool wait_for_full_details);
   void OnServerLobbyDetailsReceived(std::string result_id,
                                     model::SearchDetailsResponse details);

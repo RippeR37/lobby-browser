@@ -141,7 +141,6 @@ model::GameSearchResults FilterModelResultsFunction(
     filtered_results.lobbies.emplace_back(result);
   }
 
-  filtered_results.players = unfiltered_results.players;
   return filtered_results;
 }
 }  // namespace

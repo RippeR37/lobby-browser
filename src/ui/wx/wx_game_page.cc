@@ -185,6 +185,7 @@ void WxGamePage::TriggerSearchIfPossible() {
       model::SearchRequest{
           game_model_.name,
           std::move(current_filters),
+          base::BindOnce(&WxGamePage::OnSearchLobbiesPlayersDone, weak_this_),
       },
       base::BindOnce(&WxGamePage::OnSearchLobbiesAndServersDone, weak_this_));
 }
@@ -515,8 +516,6 @@ void WxGamePage::OnSearchLobbiesAndServersDone(model::SearchResponse response) {
   search_button_->Enable();
   results_list_->SetBackgroundColour(wxColour{0xFF, 0xFF, 0xFF});
   results_list_->Refresh();
-  players_list_->SetBackgroundColour(wxColour{0xFF, 0xFF, 0xFF});
-  players_list_->Refresh();
 
   if (response.result != model::SearchResult::kOk) {
     LOG(ERROR) << __FUNCTION__
@@ -531,6 +530,23 @@ void WxGamePage::OnSearchLobbiesAndServersDone(model::SearchResponse response) {
   if (selected_result_id_) {
     // List of known members might have changed, so let's re-request details.
     RequestSelectedLobbyDetails(false);
+  }
+}
+
+void WxGamePage::OnSearchLobbiesPlayersDone(model::GamePlayersResults players) {
+  players_list_->SetBackgroundColour(wxColour{0xFF, 0xFF, 0xFF});
+  players_list_->DeleteAllItems();
+  players_list_->Refresh();
+
+  // Append new players
+  for (const auto& result : players) {
+    std::vector<wxString> item_values;
+    for (const auto& field : result.result_fields) {
+      item_values.emplace_back(wxString::FromUTF8(field));
+    };
+
+    players_list_->AppendItem(
+        wxVector<wxVariant>{item_values.begin(), item_values.end()});
   }
 }
 
@@ -577,7 +593,6 @@ void WxGamePage::OnServerLobbyDetailsReceived(
 
 void WxGamePage::RefreshResultsList() {
   results_list_->DeleteAllItems();
-  players_list_->DeleteAllItems();
 
   const auto filtered_results = game_model_.results_filter_callback.Run(
       last_response_results_, GetCurrentGameFilters());
@@ -590,17 +605,6 @@ void WxGamePage::RefreshResultsList() {
     };
 
     results_list_->AppendItem(
-        wxVector<wxVariant>{item_values.begin(), item_values.end()});
-  }
-
-  // Append new players
-  for (const auto& result : filtered_results.players) {
-    std::vector<wxString> item_values;
-    for (const auto& field : result.result_fields) {
-      item_values.emplace_back(wxString::FromUTF8(field));
-    };
-
-    players_list_->AppendItem(
         wxVector<wxVariant>{item_values.begin(), item_values.end()});
   }
 

@@ -13,6 +13,7 @@ namespace model {
 struct SearchRequest {
   std::string game_name;
   GameFilters search_filters;
+  base::OnceCallback<void(GamePlayersResults)> players_callback;
 };
 
 enum SearchResult {

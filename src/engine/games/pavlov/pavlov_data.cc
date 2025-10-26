@@ -71,6 +71,52 @@ std::vector<std::string> PavlovHostRegions::ToVec() const {
   return enabled_regions;
 }
 
+PavlovLobbyServer::PavlovLobbyServer() = default;
+
+PavlovLobbyServer::PavlovLobbyServer(backend::eos::SearchLobbiesSession lobby)
+    : id(lobby.id),
+      name_owner(std::move(lobby.attributes["OWNERNAME_s"])),
+      players(lobby.total_players),
+      max_players(lobby.settings.max_public_players),
+      gamemode(std::move(lobby.attributes["GAMELABEL_s"])),
+      map(std::move(lobby.attributes["MAP_s"])),
+      map_label(std::move(lobby.attributes["MAPLABEL_s"])),
+      crossplatform(lobby.attributes["CROSSPLATFORM_s"] == "1"),
+      locked(!lobby.attributes["PINPROTECTED_s"].empty()),
+      state(std::move(lobby.attributes["STATE_s"])),
+      member_ids(std::move(lobby.public_players)),
+      region(std::move(lobby.attributes["REGION_s"])),
+      ip(""),
+      port(-1) {
+  platform = [](const std::string& platform_id)
+      -> std::optional<pavlov::PavlovPlatform> {
+    if (platform_id == "0") {
+      return pavlov::PavlovPlatform::kPCVR;
+    }
+    if (platform_id == "1") {
+      return pavlov::PavlovPlatform::kPSVR2;
+    }
+    return std::nullopt;
+  }(lobby.attributes["PLATFORM_s"]);
+}
+
+PavlovLobbyServer::PavlovLobbyServer(PavlovServer server)
+    : id(server.ip + ":" + std::to_string(server.port)),
+      name_owner(std::move(server.name)),
+      players(server.slots),
+      max_players(server.max_slots),
+      gamemode(std::move(server.game_mode_label)),
+      map(std::move(server.map_id)),
+      map_label(std::move(server.map_label)),
+      crossplatform(false),  // PC servers are not crossplatform
+      locked(server.password_protected),
+      platform(pavlov::PavlovPlatform::kPCVR),
+      state(""),
+      member_ids(),
+      region("?ms"),
+      ip(std::move(server.ip)),
+      port(server.port) {}
+
 void to_json(nlohmann::json& out, const PavlovGameModeFilters& obj) {
   out = obj.ToVec();
 }

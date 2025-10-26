@@ -55,9 +55,14 @@ struct GameServerLobbyResult {
 
 using GameSearchLobbiesResults = std::vector<GameServerLobbyResult>;
 
+struct GamePlayersResult {
+  std::vector<std::string> result_fields;
+};
+
+using GamePlayersResults = std::vector<GamePlayersResult>;
+
 struct GameSearchResults {
   GameSearchLobbiesResults lobbies;
-  GameSearchLobbiesResults players;
 };
 
 using GameSearchResultsFilterCallback =

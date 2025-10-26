@@ -7,6 +7,7 @@
 
 #include "nlohmann/json.hpp"
 
+#include "engine/backends/eos/eos_data.h"
 #include "models/game.h"
 
 namespace engine::game::pavlov {
@@ -110,6 +111,10 @@ struct PavlovPlayerData {
 
 // Unified struct for both Lobby and Server data
 struct PavlovLobbyServer {
+  PavlovLobbyServer();
+  PavlovLobbyServer(backend::eos::SearchLobbiesSession lobby);
+  PavlovLobbyServer(PavlovServer server);
+
   std::string id;
   std::string name_owner;
   int64_t players;

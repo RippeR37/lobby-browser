@@ -57,6 +57,10 @@ class PavlovGame : public BaseGame {
       base::OnceCallback<void(pavlov::PavlovSearchResponse)> on_done_callback,
       backend::Result result,
       backend::eos::SearchLobbiesResponse response);
+  void OnSearchLobbiesForPlayersDone(
+      base::OnceCallback<void(model::GamePlayersResults)> on_done_callback,
+      backend::Result result,
+      backend::eos::SearchLobbiesResponse response);
   void OnSearchServersDone(
       base::OnceCallback<void(pavlov::PavlovSearchResponse)> on_done_callback,
       base::net::ResourceResponse response);
@@ -83,6 +87,9 @@ class PavlovGame : public BaseGame {
   void OnSearchUsersWithDetailsDone(
       base::OnceCallback<void(model::SearchUsersResponse)> on_done_callback,
       backend::eos::SearchUsersResponse response);
+  void OnSearchLobbyPlayersDone(
+      base::OnceCallback<void(model::GamePlayersResults)> on_done_callback,
+      backend::eos::SearchLobbiesResponse response);
 
   bool IsPlayerInFavorties(const std::string& player_id) const;
 

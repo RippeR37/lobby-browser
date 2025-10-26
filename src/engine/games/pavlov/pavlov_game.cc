@@ -35,6 +35,12 @@ const std::string kPavlovEosAuthInitToken =
 const std::string kPavlovEosDeploymentId = "e708e7885689412aa634bef12ec60023";
 const std::string kPavlovEosNonce = "yA5lpRhWbECU8XQ8Xrb44w";
 
+const auto kPavlovEosEmptyCriteria = backend::eos::SearchLobbiesCriteria{
+    "attributes.VERSION_s",
+    backend::eos::CriteriaOperator::NOT_EQUAL,
+    "0.0",
+};
+
 std::string MakePavlovServerMasterListUrl(const pavlov::PavlovFilters& request,
                                           const std::string& version) {
   const std::string kUrlPrefix =
@@ -93,11 +99,7 @@ backend::eos::SearchLobbiesRequest MakeEosRequest(
   // EOS API requires at least 1 filter criteria for this API endpoint, so let's
   // add one that will always be true.
   if (eos_request.criteria.empty()) {
-    eos_request.criteria.push_back(backend::eos::SearchLobbiesCriteria{
-        "attributes.VERSION_s",
-        backend::eos::CriteriaOperator::NOT_EQUAL,
-        "0.0",
-    });
+    eos_request.criteria.push_back(kPavlovEosEmptyCriteria);
   }
 
   return eos_request;
@@ -143,7 +145,6 @@ model::GameSearchResults FilterModelResultsFunction(
     filtered_results.lobbies.emplace_back(result);
   }
 
-  filtered_results.players = unfiltered_results.players;
   return filtered_results;
 }
 
@@ -383,6 +384,18 @@ void PavlovGame::SearchLobbiesAndServers(
 
     RequestServerList(request_filters, response_callback);
   }
+
+  // Request player list if asked for it
+  if (request.players_callback) {
+    const auto kMinPlayers = 1;
+    const auto kMaxLobbies = 400;
+    auto eos_request = backend::eos::SearchLobbiesRequest{
+        {kPavlovEosEmptyCriteria}, kMinPlayers, kMaxLobbies};
+    lobby_backend_->SearchLobbies(
+        std::move(eos_request),
+        base::BindOnce(&PavlovGame::OnSearchLobbiesForPlayersDone, weak_this_,
+                       std::move(request.players_callback)));
+  }
 }
 
 void PavlovGame::GetServerLobbyDetails(
@@ -528,43 +541,46 @@ void PavlovGame::OnSearchLobbiesDone(
 
   std::vector<pavlov::PavlovLobbyServer> results;
   for (auto& lobby : response.sessions) {
-    const bool pin_locked = !lobby.attributes["PINPROTECTED_s"].empty();
-    const bool crossplay = lobby.attributes["CROSSPLATFORM_s"] == "1";
-
-    auto platform = [](const std::string& platform_id)
-        -> std::optional<pavlov::PavlovPlatform> {
-      if (platform_id == "0") {
-        return pavlov::PavlovPlatform::kPCVR;
-      }
-      if (platform_id == "1") {
-        return pavlov::PavlovPlatform::kPSVR2;
-      }
-      return std::nullopt;
-    };
-
-    results.push_back(pavlov::PavlovLobbyServer{
-        lobby.id,
-        lobby.attributes["OWNERNAME_s"],
-        lobby.total_players,
-        lobby.settings.max_public_players,
-        lobby.attributes["GAMELABEL_s"],
-        lobby.attributes["MAP_s"],
-        lobby.attributes["MAPLABEL_s"],
-        crossplay,
-        pin_locked,
-        platform(lobby.attributes["PLATFORM_s"]),
-        lobby.attributes["STATE_s"],
-        lobby.public_players,
-        lobby.attributes["REGION_s"],
-
-        // Server-specific data (ip & port)
-        "",
-        -1,
-    });
+    results.push_back(pavlov::PavlovLobbyServer{lobby});
   }
 
   std::move(on_done_callback)
       .Run(pavlov::PavlovSearchResponse{true, "", std::move(results)});
+}
+
+void PavlovGame::OnSearchLobbiesForPlayersDone(
+    base::OnceCallback<void(model::GamePlayersResults)> on_done_callback,
+    backend::Result result,
+    backend::eos::SearchLobbiesResponse response) {
+  if (result.status != backend::Result::Status::kOk) {
+    std::move(on_done_callback).Run(model::GamePlayersResults{});
+    return;
+  }
+
+  if (!response.sessions.empty()) {
+    UpdateGameVersionFromLobbySession(response.sessions.front());
+  }
+
+  std::vector<std::string> missing_data_ids;
+  for (const auto& lobby : response.sessions) {
+    for (const auto& player_id : lobby.public_players) {
+      if (!players_data_store_.GetCachedDataFor(player_id)) {
+        missing_data_ids.push_back(player_id);
+      }
+    }
+  }
+
+  if (!missing_data_ids.empty()) {
+    lobby_backend_->FetchUsersInfo(
+        backend::eos::FetchUsersInfoRequest{std::move(missing_data_ids)},
+        base::BindOnce(&PavlovGame::OnFetchPlayersDataDone, weak_this_)
+            .Then(base::BindOnce(&PavlovGame::OnSearchLobbyPlayersDone,
+                                 weak_this_, std::move(on_done_callback),
+                                 std::move(response))));
+    return;
+  }
+
+  OnSearchLobbyPlayersDone(std::move(on_done_callback), std::move(response));
 }
 
 void PavlovGame::OnSearchServersDone(
@@ -594,23 +610,7 @@ void PavlovGame::OnSearchServersDone(
     pavlov::PavlovServerListResponse server_list_response = json_response;
 
     for (const auto& server : server_list_response.servers) {
-      results.emplace_back(pavlov::PavlovLobbyServer{
-          server.ip + ":" + std::to_string(server.port),
-          server.name,
-          server.slots,
-          server.max_slots,
-          server.game_mode_label,
-          server.map_id,
-          server.map_label,
-          false,  // PC servers are not crossplatform
-          server.password_protected,
-          pavlov::PavlovPlatform::kPCVR,
-          "",     // state
-          {},     // member_ids
-          "?ms",  // region
-          server.ip,
-          server.port,
-      });
+      results.emplace_back(pavlov::PavlovLobbyServer{server});
     }
 
   } catch (const std::exception& e) {
@@ -735,37 +735,6 @@ void PavlovGame::StoreAndConvertSearchResults(
           platform_str,
           flags,
       }});
-
-      for (const auto& member_id : result.member_ids) {
-        auto player_name = member_id;
-        const auto player_data =
-            players_data_store_.GetCachedDataFor(member_id);
-        if (player_data) {
-          player_name = player_data->name;
-        }
-
-        const auto favorites_icon = std::string{"⭐"};
-        const auto is_in_favorites =
-            IsPlayerInFavorties(member_id) ||
-            (player_data && IsPlayerInFavorties(player_data->platform_id));
-
-        const auto icon = is_in_favorites ? favorites_icon : "";
-
-        model_response.results.players.emplace_back(
-            model::GameServerLobbyResult{{
-                result.id,
-                icon,
-                player_name,
-                result.name_owner,
-                result.gamemode,
-                result.map_label,
-                std::to_string(result.players) + "/" +
-                    std::to_string(result.max_players),
-                result.region,
-                platform_str,
-                flags,
-            }});
-      }
     }
   }
 
@@ -928,6 +897,70 @@ void PavlovGame::OnSearchUsersWithDetailsDone(
           "",
           std::move(results),
       });
+}
+
+void PavlovGame::OnSearchLobbyPlayersDone(
+    base::OnceCallback<void(model::GamePlayersResults)> on_done_callback,
+    backend::eos::SearchLobbiesResponse response) {
+  model::GamePlayersResults result;
+
+  for (const auto& lobby : response.sessions) {
+    for (const auto& member_id : lobby.public_players) {
+      auto player_name = member_id;
+      const auto player_data = players_data_store_.GetCachedDataFor(member_id);
+      if (player_data) {
+        player_name = player_data->name;
+      }
+
+      const auto pavlov_lobby = pavlov::PavlovLobbyServer{lobby};
+
+      const auto favorites_icon = std::string{"⭐"};
+      const auto is_in_favorites =
+          IsPlayerInFavorties(member_id) ||
+          (player_data && IsPlayerInFavorties(player_data->platform_id));
+
+      const auto icon = is_in_favorites ? favorites_icon : "";
+
+      std::string flags;
+      if (pavlov_lobby.locked) {
+        flags += "🔒";
+      }
+      if (pavlov_lobby.crossplatform) {
+        flags += "⫘";
+      } else if (!flags.empty()) {
+        flags += "     ";
+      }
+
+      const auto* platform_str =
+          [](std::optional<pavlov::PavlovPlatform> platform) {
+            if (!platform) {
+              return "Unknown";
+            }
+            switch (*platform) {
+              case pavlov::PavlovPlatform::kPCVR:
+                return "PC VR";
+              case pavlov::PavlovPlatform::kPSVR2:
+                return "PS VR2";
+            }
+          }(pavlov_lobby.platform);
+
+      result.emplace_back(model::GamePlayersResult{{
+          pavlov_lobby.id,
+          icon,
+          player_name,
+          pavlov_lobby.name_owner,
+          pavlov_lobby.gamemode,
+          pavlov_lobby.map_label,
+          std::to_string(pavlov_lobby.players) + "/" +
+              std::to_string(pavlov_lobby.max_players),
+          pavlov_lobby.region,
+          platform_str,
+          flags,
+      }});
+    }
+  }
+
+  std::move(on_done_callback).Run(std::move(result));
 }
 
 bool PavlovGame::IsPlayerInFavorties(const std::string& player_id) const {
