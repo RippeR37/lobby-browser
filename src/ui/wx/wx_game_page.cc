@@ -13,6 +13,7 @@
 #include "wx/utils.h"
 
 #include "ui/wx/wx_lobby_connect_dialog.h"
+#include "ui/wx/wx_players_list_model.h"
 #include "ui/wx/wx_results_list_model.h"
 #include "ui/wx/wx_web_view_members_template.h"
 #include "utils/strings.h"
@@ -24,6 +25,8 @@ namespace {
 enum GAME_PAGE_EVENT_IDS {
   ID_Lobby_ContextMenu_ShowDetails = 1001,
   ID_Lobby_ContextMenu_Connect = 1002,
+  ID_Players_ContextMenu_AddFavorite = 1003,
+  ID_Players_ContextMenu_RemoveFavorite = 1004,
 };
 
 enum GAME_PAGE_PAGE_INDEX {
@@ -65,20 +68,29 @@ bool MatchFilterField(std::string value,
   }
 }
 
-std::string GetTabTitleWithCount(const std::string& base,
-                                 std::optional<size_t> count) {
+std::string GetTabTitleWithCount(std::string base,
+                                 std::optional<size_t> count,
+                                 std::optional<size_t> extra_count) {
   if (count) {
-    return base + " (" + std::to_string(*count) + ")";
+    base += " (" + std::to_string(*count) + ")";
+  }
+  if (extra_count) {
+    base += " (" + std::to_string(*extra_count) + ")";
   }
   return base;
 }
 
-std::string GetLobbiesServersTabTitle(std::optional<size_t> results_count) {
-  return GetTabTitleWithCount("Lobbies and Servers", results_count);
+std::string GetLobbiesServersTabTitle(
+    std::optional<size_t> results_count = std::nullopt,
+    std::optional<size_t> extra_count = std::nullopt) {
+  return GetTabTitleWithCount("Lobbies and Servers", results_count,
+                              extra_count);
 }
 
-std::string GetPlayersTabTitle(std::optional<size_t> results_count) {
-  return GetTabTitleWithCount("Players", results_count);
+std::string GetPlayersTabTitle(
+    std::optional<size_t> results_count = std::nullopt,
+    std::optional<size_t> extra_count = std::nullopt) {
+  return GetTabTitleWithCount("Players", results_count, extra_count);
 }
 
 }  // namespace
@@ -108,10 +120,10 @@ WxGamePage::WxGamePage(
 
   // Add pages to the inner notebook
   main_panel_notebook_->AddPage(CreateMainGamePage(main_panel_notebook_),
-                                GetLobbiesServersTabTitle({}));
+                                GetLobbiesServersTabTitle());
   if (!game_model_.results_format.players_columns.empty()) {
     main_panel_notebook_->AddPage(CreatePlayersGamePage(main_panel_notebook_),
-                                  GetPlayersTabTitle({}));
+                                  GetPlayersTabTitle());
   }
 
   main_panel_notebook_->Bind(wxEVT_LEFT_DCLICK, [&](wxMouseEvent& event) {
@@ -500,7 +512,9 @@ wxPanel* WxGamePage::CreatePlayersGamePage(wxWindow* parent) {
 wxDataViewCtrl* WxGamePage::CreateGamePagePlayersListCtrl(
     wxWindow* parent,
     const model::GameResultsFormat& game_results_format) {
-  auto* model = new WxResultsListModel(game_results_format.players_columns);
+  const int favorites_column = 2;
+
+  auto* model = new WxPlayersListModel(favorites_column);
   players_list_ = new wxDataViewListCtrl(parent, wxID_ANY);
   players_list_->AssociateModel(model);
   model->DecRef();
@@ -529,14 +543,53 @@ wxDataViewCtrl* WxGamePage::CreateGamePagePlayersListCtrl(
       }
     }();
 
-    players_list_->AppendTextColumn(column.name, wxDATAVIEW_CELL_INERT,
-                                    static_cast<int>(column.proportion),
-                                    alignment, flags);
+    auto* col = players_list_->AppendTextColumn(
+        column.name, wxDATAVIEW_CELL_INERT, static_cast<int>(column.proportion),
+        alignment, flags);
+
+    if (column.name == "Player Name") {
+      col->SetSortOrder(true);
+    }
   }
 
   players_list_->Bind(
       wxEVT_DATAVIEW_ITEM_ACTIVATED,
       [=, this](wxDataViewEvent& event) { OnPlayersRowEntered(event); });
+  players_list_->Bind(
+      wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, [=, this](wxDataViewEvent& event) {
+        wxDataViewItem item = event.GetItem();
+        if (!item.IsOk())
+          return;
+
+        if (!game_model_.features.list_players) {
+          return;
+        }
+
+        int row = players_list_->ItemToRow(item);
+        wxVariant value;
+        players_list_->GetValue(value, row, 1);
+        wxString player_id = value.GetString();
+        players_list_->GetValue(value, row, 4);
+        wxString player_name = value.GetString();
+
+        wxMenu menu;
+
+        const bool is_in_favorites = event_handler_->IsPlayerInFavorites(
+            game_model_.name, player_id.ToStdString());
+        if (is_in_favorites) {
+          menu.Append(ID_Players_ContextMenu_RemoveFavorite,
+                      "Remove " + player_name + " from favorite");
+        } else {
+          menu.Append(ID_Players_ContextMenu_AddFavorite,
+                      "Add " + player_name + " to favorites");
+        }
+
+        menu.Bind(wxEVT_MENU, [=, this](wxCommandEvent& evt) {
+          OnPlayersRowContextMenuSelected(item, evt.GetId());
+        });
+
+        parent_->PopupMenu(&menu);
+      });
 
   return players_list_;
 }
@@ -570,6 +623,27 @@ void WxGamePage::OnRowContextMenuSelected(wxDataViewItem selected_lobby,
 
     case ID_Lobby_ContextMenu_Connect: {
       BringConnectToLobbyDialog(selected_lobby);
+      break;
+    }
+  }
+}
+
+void WxGamePage::OnPlayersRowContextMenuSelected(wxDataViewItem selected_lobby,
+                                                 int event_id) {
+  switch (event_id) {
+    case ID_Players_ContextMenu_AddFavorite: {
+      wxVariant player_id;
+      players_list_->GetStore()->GetValue(player_id, selected_lobby, 1);
+      event_handler_->AddPlayerToFavorites(game_model_.name,
+                                           player_id.GetString().ToStdString());
+      break;
+    }
+
+    case ID_Players_ContextMenu_RemoveFavorite: {
+      wxVariant player_id;
+      players_list_->GetStore()->GetValue(player_id, selected_lobby, 1);
+      event_handler_->RemovePlayerFromFavorites(
+          game_model_.name, player_id.GetString().ToStdString());
       break;
     }
   }
@@ -641,8 +715,19 @@ void WxGamePage::OnSearchLobbiesPlayersDone(model::GamePlayersResults players) {
   players_list_->DeleteAllItems();
   players_list_->Refresh();
 
-  main_panel_notebook_->SetPageText(kMainPageIdxPlayers,
-                                    GetPlayersTabTitle(players.size()));
+  const auto is_favorite = [](const model::GamePlayersResult& player_results) {
+    // Hack, depends on a specific format, I guess.
+    if (player_results.result_fields.size() < 3) {
+      return false;
+    }
+    return !player_results.result_fields[2].empty();
+  };
+
+  const auto favorites_count =
+      std::count_if(players.begin(), players.end(), is_favorite);
+
+  main_panel_notebook_->SetPageText(
+      kMainPageIdxPlayers, GetPlayersTabTitle(players.size(), favorites_count));
 
   // Append new players
   for (const auto& result : players) {

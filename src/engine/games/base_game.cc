@@ -9,6 +9,21 @@ BaseGame::BaseGame(SetStatusTextCallback set_status_text,
 
 BaseGame::~BaseGame() = default;
 
+bool BaseGame::IsPlayerInFavorites(std::string player_id) const {
+  (void)player_id;
+  return false;
+}
+
+void BaseGame::AddPlayerToFavorites(std::string player_id) {
+  (void)player_id;
+  return;
+}
+
+void BaseGame::RemovePlayerFromFavorites(std::string player_id) {
+  (void)player_id;
+  return;
+}
+
 void BaseGame::SetStatusText(std::string status_text) {
   set_status_text_.Run(std::move(status_text));
 }

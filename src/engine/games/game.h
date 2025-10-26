@@ -23,6 +23,9 @@ class Game {
   virtual void SearchUsers(model::SearchUsersRequest request,
                            base::OnceCallback<void(model::SearchUsersResponse)>
                                on_done_callback) = 0;
+  virtual bool IsPlayerInFavorites(std::string player_id) const = 0;
+  virtual void AddPlayerToFavorites(std::string player_id) = 0;
+  virtual void RemovePlayerFromFavorites(std::string player_id) = 0;
 };
 
 }  // namespace engine::game

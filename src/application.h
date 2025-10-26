@@ -32,6 +32,12 @@ class Application : public wxApp, public ui::EventHandler {
   void UpdateGameConfig(std::string game_name,
                         model::GameFilters filters) override;
   void UpdateUiConfig(model::UiConfig config) override;
+  bool IsPlayerInFavorites(std::string game_name,
+                           std::string player_id) const override;
+  void AddPlayerToFavorites(std::string game_name,
+                            std::string player_id) override;
+  void RemovePlayerFromFavorites(std::string game_name,
+                                 std::string player_id) override;
 
  private:
   // wxApp

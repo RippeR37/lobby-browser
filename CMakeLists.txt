@@ -173,6 +173,8 @@ target_sources(lobby_browser
     src/ui/wx/wx_lobby_connect_dialog.h
     src/ui/wx/wx_main_window.cc
     src/ui/wx/wx_main_window.h
+    src/ui/wx/wx_players_list_model.cc
+    src/ui/wx/wx_players_list_model.h
     src/ui/wx/wx_preferences_dialog.cc
     src/ui/wx/wx_preferences_dialog.h
     src/ui/wx/wx_presenter.cc

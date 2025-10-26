@@ -173,10 +173,6 @@ PavlovGame::PavlovGame(SetStatusTextCallback set_status_text,
 PavlovGame::~PavlovGame() = default;
 
 model::Game PavlovGame::GetModel() const {
-  const bool has_favorites = !config_.favorite_players.empty();
-
-  const auto players_favorites_width = has_favorites ? 20 : 0;
-
   return model::Game{
       "Pavlov",
       "IDI_ICON_PAVLOV",
@@ -267,8 +263,8 @@ model::Game PavlovGame::GetModel() const {
               },
               model::GameResultsColumnFormat{
                   "",
-                  true,
-                  players_favorites_width,
+                  false,
+                  0,
                   model::GameResultsColumnAlignment::kCenter,
                   model::GameResultsColumnOrdering::kString,
               },
@@ -282,7 +278,7 @@ model::Game PavlovGame::GetModel() const {
               model::GameResultsColumnFormat{
                   "Player Name",
                   true,
-                  180 - players_favorites_width,
+                  200,
                   model::GameResultsColumnAlignment::kLeft,
                   model::GameResultsColumnOrdering::kString,
               },
@@ -296,14 +292,14 @@ model::Game PavlovGame::GetModel() const {
               model::GameResultsColumnFormat{
                   "Mode",
                   true,
-                  180,
+                  170,
                   model::GameResultsColumnAlignment::kLeft,
                   model::GameResultsColumnOrdering::kString,
               },
               model::GameResultsColumnFormat{
                   "Map",
                   true,
-                  180,
+                  170,
                   model::GameResultsColumnAlignment::kLeft,
                   model::GameResultsColumnOrdering::kString,
               },
@@ -439,6 +435,18 @@ void PavlovGame::SearchUsers(
       backend::pavlov::SearchUsersRequest{request.user_name},
       base::BindOnce(&PavlovGame::OnSearchUsersDone, weak_this_,
                      std::move(on_done_callback)));
+}
+
+bool PavlovGame::IsPlayerInFavorites(std::string player_id) const {
+  return config_.favorite_players.count(player_id);
+}
+
+void PavlovGame::AddPlayerToFavorites(std::string player_id) {
+  config_.favorite_players.insert(player_id);
+}
+
+void PavlovGame::RemovePlayerFromFavorites(std::string player_id) {
+  config_.favorite_players.erase(player_id);
 }
 
 // static
@@ -931,8 +939,8 @@ void PavlovGame::OnSearchLobbyPlayersDone(
 
       const auto favorites_icon = std::string{"⭐"};
       const auto is_in_favorites =
-          IsPlayerInFavorties(member_id) ||
-          (player_data && IsPlayerInFavorties(player_data->platform_id));
+          IsPlayerInFavorites(member_id) ||
+          (player_data && IsPlayerInFavorites(player_data->platform_id));
 
       const auto icon = is_in_favorites ? favorites_icon : "";
 
@@ -978,10 +986,6 @@ void PavlovGame::OnSearchLobbyPlayersDone(
   }
 
   std::move(on_done_callback).Run(std::move(result));
-}
-
-bool PavlovGame::IsPlayerInFavorties(const std::string& player_id) const {
-  return config_.favorite_players.count(player_id) > 0;
 }
 
 }  // namespace engine::game

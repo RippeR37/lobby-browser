@@ -212,4 +212,37 @@ const game::Game* AppEngineImpl::LoadGame(const std::string& game,
   return nullptr;
 }
 
+bool AppEngineImpl::IsPlayerInFavorites(std::string game_name,
+                                        std::string player_id) const {
+  auto game_it = games_.find(game_name);
+  if (game_it == games_.end()) {
+    return false;
+  }
+
+  auto& game = *game_it->second;
+  return game.IsPlayerInFavorites(std::move(player_id));
+}
+
+void AppEngineImpl::AddPlayerToFavorites(std::string game_name,
+                                         std::string player_id) {
+  auto game_it = games_.find(game_name);
+  if (game_it == games_.end()) {
+    return;
+  }
+
+  auto& game = *game_it->second;
+  game.AddPlayerToFavorites(std::move(player_id));
+}
+
+void AppEngineImpl::RemovePlayerFromFavorites(std::string game_name,
+                                              std::string player_id) {
+  auto game_it = games_.find(game_name);
+  if (game_it == games_.end()) {
+    return;
+  }
+
+  auto& game = *game_it->second;
+  game.RemovePlayerFromFavorites(std::move(player_id));
+}
+
 }  // namespace engine

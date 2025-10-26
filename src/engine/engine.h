@@ -31,6 +31,12 @@ class AppEngine {
   virtual void UpdateGameConfig(std::string game_name,
                                 model::GameFilters filters) = 0;
   virtual void UpdateUiConfig(model::UiConfig config) = 0;
+  virtual bool IsPlayerInFavorites(std::string game_name,
+                                   std::string player_id) const = 0;
+  virtual void AddPlayerToFavorites(std::string game_name,
+                                    std::string player_id) = 0;
+  virtual void RemovePlayerFromFavorites(std::string game_name,
+                                         std::string player_id) = 0;
 };
 
 }  // namespace engine

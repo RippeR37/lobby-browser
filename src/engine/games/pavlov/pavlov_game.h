@@ -41,6 +41,9 @@ class PavlovGame : public BaseGame {
   void SearchUsers(model::SearchUsersRequest request,
                    base::OnceCallback<void(model::SearchUsersResponse)>
                        on_done_callback) override;
+  bool IsPlayerInFavorites(std::string player_id) const override;
+  void AddPlayerToFavorites(std::string player_id) override;
+  void RemovePlayerFromFavorites(std::string player_id) override;
 
  private:
   static pavlov::PavlovSearchResponse CombineSearchResponses(

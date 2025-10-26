@@ -91,6 +91,23 @@ void Application::UpdateUiConfig(model::UiConfig config) {
   engine_->UpdateUiConfig(std::move(config));
 }
 
+bool Application::IsPlayerInFavorites(std::string game_name,
+                                      std::string player_id) const {
+  return engine_->IsPlayerInFavorites(std::move(game_name),
+                                      std::move(player_id));
+}
+
+void Application::AddPlayerToFavorites(std::string game_name,
+                                       std::string player_id) {
+  engine_->AddPlayerToFavorites(std::move(game_name), std::move(player_id));
+}
+
+void Application::RemovePlayerFromFavorites(std::string game_name,
+                                            std::string player_id) {
+  engine_->RemovePlayerFromFavorites(std::move(game_name),
+                                     std::move(player_id));
+}
+
 bool Application::OnExceptionInMainLoop() {
   try {
     throw;  // Rethrow the current exception.

@@ -15,6 +15,11 @@ class BaseGame : public Game {
            ReportMessageCallback report_message);
   ~BaseGame() override;
 
+  // Game
+  bool IsPlayerInFavorites(std::string player_id) const override;
+  void AddPlayerToFavorites(std::string player_id) override;
+  void RemovePlayerFromFavorites(std::string player_id) override;
+
  protected:
   void SetStatusText(std::string);
   void ReportMessage(Presenter::MessageType type,
