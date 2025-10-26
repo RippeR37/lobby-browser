@@ -500,6 +500,9 @@ void WxGamePage::OnPlayersRowEntered(wxDataViewEvent& event) {
       if (main_panel_notebook_->GetSelection() != 0) {
         main_panel_notebook_->SetSelection(0);
       }
+      wxDataViewItem item = results_list_->RowToItem(row);
+      results_list_->EnsureVisible(item);
+      results_list_->Select(item);
       ShowLobbyDetails(row_variant.GetString());
       break;
     }
