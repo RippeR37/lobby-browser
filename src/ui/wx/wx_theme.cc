@@ -23,10 +23,12 @@ static const inline auto COLOR_MAIN_PANEL_BG = COLOR_MAIN_WINDOW_BG;
 static const inline auto COLOR_TOOLBOOK_BG = COLOR_MAIN_WINDOW_BG;
 static const inline auto COLOR_LIST_LOADING_BG = wxColour{0x33, 0x33, 0x33};
 static const inline auto COLOR_LIST_LOADED_BG = wxColour{0x2B, 0x2B, 0x2B};
-static const inline auto COLOR_GAME_PANEL_BG = wxColour{0x2B, 0x2B, 0x2B};
-static const inline auto COLOR_GAME_PAGE_BG = COLOR_GAME_PANEL_BG;
+
+static const inline auto COLOR_GAME_PANEL_BG = wxColour{0x20, 0x20, 0x20};
+
+static const inline auto COLOR_GAME_PAGE_BG = wxColour{0x2B, 0x2B, 0x2B};
 static const inline auto COLOR_GAME_PLAYERS_PAGE_BG = COLOR_GAME_PAGE_BG;
-static const inline auto COLOR_GAME_DETAILS_BG = wxColour{0x33, 0x33, 0x33};
+static const inline auto COLOR_GAME_DETAILS_BG = wxColour{0x2B, 0x2B, 0x2B};
 }  // namespace dark
 }  // namespace
 
