@@ -183,6 +183,27 @@ WxMainWindow::~WxMainWindow() {
   UpdateConfig();
 }
 
+void WxMainWindow::RestoreFromTray() {
+  if (!IsShown()) {
+    Show(true);
+  }
+
+  if (IsIconized()) {
+    Restore();
+
+    for (auto& [game, page] : game_pages_) {
+      page->OnRestoreFromTray();
+    }
+  }
+
+  Raise();
+}
+
+void WxMainWindow::QuitFromTray() {
+  wxCommandEvent event{wxEVT_MENU, wxID_EXIT};
+  wxPostEvent(this, event);
+}
+
 void WxMainWindow::CreatePageForGame(const model::Game& game, bool selected) {
   wxBitmap icon_bitmap(game.icon_path, wxBITMAP_TYPE_PNG_RESOURCE);
   wxImage icon_image = icon_bitmap.ConvertToImage();
@@ -378,7 +399,7 @@ void WxMainWindow::OnMinimize(wxIconizeEvent& event) {
 void WxMainWindow::OnAbout(wxCommandEvent&) {
   wxAboutDialogInfo info;
   info.SetName(_(kDefaultWindowTitle));
-  info.SetVersion(_("1.0"));
+  info.SetVersion(_("1.0.1"));
   info.SetDescription(
       _("\nThis is a simple application allowing you to browse online\n"
         "game servers and lobbies without having to launch games."));

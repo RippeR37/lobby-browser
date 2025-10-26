@@ -22,7 +22,7 @@
 
 namespace ui::wx {
 
-class WxMainWindow : public wxFrame {
+class WxMainWindow : public wxFrame, public WxTrayIcon::Client {
  public:
   static std::pair<bool, std::vector<std::string>> AskForEnabledGames(
       wxWindow* parent,
@@ -34,6 +34,10 @@ class WxMainWindow : public wxFrame {
                    void(Presenter::MessageType, std::string, std::string)>
                    report_message_callback);
   ~WxMainWindow() override;
+
+  // WxTrayIcon::Client
+  void RestoreFromTray() override;
+  void QuitFromTray() override;
 
   void CreatePageForGame(const model::Game& game, bool selected);
   void Initialize(const model::AppConfig& app_config,

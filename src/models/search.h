@@ -38,6 +38,7 @@ struct SearchDetailsResponse {
     std::string name;
     std::string avatar_url;
     std::string icon_url;
+    std::string profile_url;
   };
 
   bool all_members_known;

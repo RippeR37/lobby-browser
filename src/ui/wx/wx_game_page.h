@@ -40,6 +40,8 @@ class WxGamePage {
   void StartAutoSearch(std::map<std::string, std::string> autosearch_options);
   void StopAutoSearch();
 
+  void OnRestoreFromTray();
+
  private:
   wxPanel* CreateMainGamePage(wxWindow* parent);
   wxDataViewCtrl* CreateMainGamePageLobbyListCtrl(
@@ -72,6 +74,7 @@ class WxGamePage {
 
   model::GameSearchResults last_response_results_;
   std::optional<std::string> selected_result_id_;
+  std::optional<model::SearchDetailsResponse> last_search_details_;
   bool switch_to_details_tab_;
 
   std::optional<std::map<std::string, std::string>> autosearch_options_;

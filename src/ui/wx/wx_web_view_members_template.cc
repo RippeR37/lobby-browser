@@ -37,7 +37,7 @@ std::string WxWebViewMembersMemberRow(
         <img width='48' height='48' src='$USERAVATAR' alt='' title='$USERNAME'>
       </td>
       <td style='padding-left:10px;'>
-        <img width='14' height='14' src='$USERICON'>
+        <img width='14' height='14' src='$USERICON' onclick='window.wxWebView.postMessage("defaultBrowserNavigate;$USERPROFILE")'>
         <span style='font-size:18px;font-weight:bold;'>$USERNAME</span><br>
         <span style='font-size:10px;font-family:monospace;'>$USERID</span>
       </td>
@@ -48,6 +48,7 @@ std::string WxWebViewMembersMemberRow(
   util::ReplaceAll(result, "$USERID", member.id);
   util::ReplaceAll(result, "$USERAVATAR", member.avatar_url);
   util::ReplaceAll(result, "$USERICON", member.icon_url);
+  util::ReplaceAll(result, "$USERPROFILE", member.profile_url);
 
   return result;
 }

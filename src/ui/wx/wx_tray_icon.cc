@@ -4,19 +4,19 @@
 
 namespace ui::wx {
 
-WxTrayIcon::WxTrayIcon(wxFrame* parent) : parent_(parent) {
+WxTrayIcon::WxTrayIcon(Client* client) : client_(client) {
   Bind(
       wxEVT_TASKBAR_LEFT_DOWN,
-      [=](const wxTaskBarIconEvent&) { RestoreParent(); }, wxID_ANY);
+      [=](const wxTaskBarIconEvent&) { RestoreClient(); }, wxID_ANY);
 
   Bind(
-      wxEVT_MENU, [=](const wxCommandEvent&) { RestoreParent(); },
+      wxEVT_MENU, [=](const wxCommandEvent&) { RestoreClient(); },
       ID_TRAY_RESTORE);
-  Bind(wxEVT_MENU, [=](const wxCommandEvent&) { QuitParent(); }, ID_TRAY_EXIT);
+  Bind(wxEVT_MENU, [=](const wxCommandEvent&) { QuitClient(); }, ID_TRAY_EXIT);
 }
 
 void WxTrayIcon::OnLeftButtonClick(wxTaskBarIconEvent&) {
-  RestoreParent();
+  RestoreClient();
 }
 
 wxMenu* WxTrayIcon::CreatePopupMenu() {
@@ -26,25 +26,20 @@ wxMenu* WxTrayIcon::CreatePopupMenu() {
   return menu;
 }
 
-void WxTrayIcon::RestoreParent() {
-  if (!parent_) {
+void WxTrayIcon::RestoreClient() {
+  if (!client_) {
     return;
   }
 
-  if (!parent_->IsShown()) {
-    parent_->Show(true);
-  }
-
-  if (parent_->IsIconized()) {
-    parent_->Restore();
-  }
-
-  parent_->Raise();
+  client_->RestoreFromTray();
 }
 
-void WxTrayIcon::QuitParent() {
-  wxCommandEvent event{wxEVT_MENU, wxID_EXIT};
-  wxPostEvent(parent_, event);
+void WxTrayIcon::QuitClient() {
+  if (!client_) {
+    return;
+  }
+
+  client_->QuitFromTray();
 }
 
 }  // namespace ui::wx

@@ -14,16 +14,24 @@ enum {
 
 class WxTrayIcon : public wxTaskBarIcon {
  public:
-  WxTrayIcon(wxFrame* parent);
+  class Client {
+   public:
+    virtual ~Client() = default;
+
+    virtual void RestoreFromTray() = 0;
+    virtual void QuitFromTray() = 0;
+  };
+
+  WxTrayIcon(Client* client);
 
   void OnLeftButtonClick(wxTaskBarIconEvent&);
   wxMenu* CreatePopupMenu() override;
 
  private:
-  void RestoreParent();
-  void QuitParent();
+  void RestoreClient();
+  void QuitClient();
 
-  wxFrame* parent_;
+  Client* client_;
 };
 
 }  // namespace ui::wx

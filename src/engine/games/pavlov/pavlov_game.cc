@@ -699,12 +699,22 @@ void PavlovGame::TryResolvePendingServerLobbyDetailsRequest(bool force) {
                    "ps-logo-favicon";
         }
       }();
+      const auto profile_url = [&]() -> std::string {
+        switch (*player_data->platform) {
+          case pavlov::PavlovUserPlatform::kSteam:
+            return "https://steamcommunity.com/profiles/" +
+                   player_data->platform_id;
+          default:
+            return {};
+        }
+      }();
       response.members.emplace_back(model::SearchDetailsResponse::Member{
           player_data->platform_id.empty() ? member_id
                                            : player_data->platform_id,
           player_data->name,
           "http://prod.cdn.pavlov-vr.com/avatar/" + member_id + ".png",
           icon_url,
+          profile_url,
       });
     } else if (pending_search_details_request_->first.wait_for_full_details &&
                !force) {
@@ -716,6 +726,7 @@ void PavlovGame::TryResolvePendingServerLobbyDetailsRequest(bool force) {
           member_id,
           "???",
           "http://prod.cdn.pavlov-vr.com/avatar/" + member_id + ".png",
+          "",
           "",
       });
     }

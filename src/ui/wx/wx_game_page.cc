@@ -8,6 +8,7 @@
 #include "wx/statbox.h"
 #include "wx/stattext.h"
 #include "wx/textctrl.h"
+#include "wx/utils.h"
 
 #include "ui/wx/wx_results_list_model.h"
 #include "ui/wx/wx_web_view_members_template.h"
@@ -195,6 +196,25 @@ void WxGamePage::StopAutoSearch() {
   autosearch_timer_.Stop();
 }
 
+void WxGamePage::OnRestoreFromTray() {
+  if (game_model_.results_format.has_lobby_details) {
+    const auto selected_page = game_details_notebook_->GetSelection();
+
+    game_details_notebook_->RemovePage(1);
+    game_details_notebook_->InsertPage(
+        1, CreateMainGamePageDetailsDetailsPanel(game_details_notebook_),
+        "Details");
+
+    if (selected_result_id_ && last_search_details_) {
+      OnServerLobbyDetailsReceived(*selected_result_id_, *last_search_details_);
+    }
+
+    if (selected_page != wxNOT_FOUND) {
+      game_details_notebook_->SetSelection(selected_page);
+    }
+  }
+}
+
 wxPanel* WxGamePage::CreateMainGamePage(wxWindow* parent) {
   // First page of the notebook
   auto* main_game_page = new wxPanel(parent);
@@ -265,6 +285,7 @@ wxPanel* WxGamePage::CreateMainGamePageDetailsPanel(wxWindow* parent) {
   game_details_notebook_->SetBackgroundColour(*wxWHITE);
   details_panel_sizer->Add(game_details_notebook_, 20, wxEXPAND);
 
+  // IMPORTANT: Update `OnRestoreFromTray()` if the order changes
   game_details_notebook_->AddPage(
       CreateMainGamePageDetailsFilterPanel(game_details_notebook_), "Filters");
   if (game_model_.results_format.has_lobby_details) {
@@ -321,21 +342,45 @@ wxPanel* WxGamePage::CreateMainGamePageDetailsDetailsPanel(wxWindow* parent) {
   auto* panel_sizer = new wxBoxSizer(wxVERTICAL);
   panel->SetSizer(panel_sizer);
 
-  details_panel_ = wxWebView::New(panel, wxID_ANY, wxWebViewDefaultURLStr,
-                                  wxDefaultPosition, {});
+  if (details_panel_) {
+    details_panel_->Destroy();
+  }
+
+  auto* details_panel = wxWebView::New(panel, wxID_ANY, wxWebViewDefaultURLStr,
+                                       wxDefaultPosition, {});
+  details_panel_ = details_panel;
   details_panel_->EnableContextMenu(false);
   details_panel_->EnableAccessToDevTools(false);
 
   // Install message handler with the name wx_msg
   details_panel_->AddScriptMessageHandler("wxWebView");
-  details_panel_->Bind(wxEVT_WEBVIEW_SCRIPT_MESSAGE_RECEIVED,
-                       [=](wxWebViewEvent& evt) {
-                         if (evt.GetMessageHandler() == "wxWebView") {
-                           if (evt.GetString() == "keydown_F5") {
-                             TriggerSearchIfPossible();
-                           }
-                         }
-                       });
+  details_panel_->Bind(
+      wxEVT_WEBVIEW_SCRIPT_MESSAGE_RECEIVED, [=](wxWebViewEvent& evt) {
+        if (evt.GetMessageHandler() == "wxWebView") {
+          if (evt.GetString() == "keydown_F5") {
+            TriggerSearchIfPossible();
+          } else if (evt.GetString().starts_with("defaultBrowserNavigate;")) {
+            const auto navigateUrl =
+                evt.GetString().substr(sizeof("defaultBrowserNavigate;") - 1);
+            if (!navigateUrl.empty()) {
+              LOG(INFO) << "Navigate to: " << navigateUrl;
+              wxLaunchDefaultBrowser(navigateUrl);
+            }
+          }
+        }
+      });
+
+  details_panel_->Bind(wxEVT_WEBVIEW_LOADED, [details_panel](wxWebViewEvent&) {
+    wxString script = R"(
+      document.addEventListener('keydown', function(e) {
+          if (e.key === 'F5') {
+              window.wxWebView.postMessage('keydown_F5');
+              e.preventDefault(); // prevent default page reload
+          }
+      });
+    )";
+    details_panel->RunScript(script);
+  });
 
   panel_sizer->Add(details_panel_, 1, wxEXPAND | wxALL, 5);
   return panel;
@@ -403,6 +448,8 @@ void WxGamePage::OnServerLobbyDetailsReceived(
     return;
   }
 
+  last_search_details_ = details;
+
   if (game_details_notebook_->GetPageCount() >= 2 && switch_to_details_tab_) {
     game_details_notebook_->SetSelection(1);
     switch_to_details_tab_ = false;
@@ -414,17 +461,6 @@ void WxGamePage::OnServerLobbyDetailsReceived(
   }
   html_content += WxWebViewMembersFooter();
   details_panel_->SetPage(html_content, "");
-
-  // Scripts handling
-  wxString script = R"(
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'F5') {
-            window.wxWebView.postMessage('keydown_F5');
-            e.preventDefault(); // prevent default page reload
-        }
-    });
-  )";
-  details_panel_->RunScript(script);
 
   if (!details.all_members_known) {
     // Engine didn't have all the members known at the time, so let's query
