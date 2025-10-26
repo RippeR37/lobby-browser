@@ -252,7 +252,14 @@ model::Game PavlovGame::GetModel() const {
           },
           {
               model::GameResultsColumnFormat{
-                  "Id",
+                  "Lobby Id",
+                  false,
+                  0,
+                  model::GameResultsColumnAlignment::kLeft,
+                  model::GameResultsColumnOrdering::kString,
+              },
+              model::GameResultsColumnFormat{
+                  "Player Id",
                   false,
                   0,
                   model::GameResultsColumnAlignment::kLeft,
@@ -266,30 +273,37 @@ model::Game PavlovGame::GetModel() const {
                   model::GameResultsColumnOrdering::kString,
               },
               model::GameResultsColumnFormat{
+                  "Platform",
+                  true,
+                  65,
+                  model::GameResultsColumnAlignment::kLeft,
+                  model::GameResultsColumnOrdering::kString,
+              },
+              model::GameResultsColumnFormat{
                   "Player Name",
                   true,
-                  200 - players_favorites_width,
+                  180 - players_favorites_width,
                   model::GameResultsColumnAlignment::kLeft,
                   model::GameResultsColumnOrdering::kString,
               },
               model::GameResultsColumnFormat{
                   "Lobby Owner",
                   true,
-                  200,
+                  180,
                   model::GameResultsColumnAlignment::kLeft,
                   model::GameResultsColumnOrdering::kString,
               },
               model::GameResultsColumnFormat{
                   "Mode",
                   true,
-                  200,
+                  180,
                   model::GameResultsColumnAlignment::kLeft,
                   model::GameResultsColumnOrdering::kString,
               },
               model::GameResultsColumnFormat{
                   "Map",
                   true,
-                  200,
+                  180,
                   model::GameResultsColumnAlignment::kLeft,
                   model::GameResultsColumnOrdering::kString,
               },
@@ -899,9 +913,18 @@ void PavlovGame::OnSearchLobbyPlayersDone(
   for (const auto& lobby : response.sessions) {
     for (const auto& member_id : lobby.public_players) {
       auto player_name = member_id;
+      auto player_platform = "";
       const auto player_data = players_data_store_.GetCachedDataFor(member_id);
       if (player_data) {
         player_name = player_data->name;
+        switch (*player_data->platform) {
+          case pavlov::PavlovUserPlatform::kSteam:
+            player_platform = "Steam";
+            break;
+          case pavlov::PavlovUserPlatform::kPlayStation:
+            player_platform = "PSN";
+            break;
+        }
       }
 
       const auto pavlov_lobby = pavlov::PavlovLobbyServer{lobby};
@@ -938,7 +961,9 @@ void PavlovGame::OnSearchLobbyPlayersDone(
 
       result.emplace_back(model::GamePlayersResult{{
           pavlov_lobby.id,
+          member_id,
           icon,
+          player_platform,
           player_name,
           pavlov_lobby.name_owner,
           pavlov_lobby.gamemode,

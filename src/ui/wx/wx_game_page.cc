@@ -26,6 +26,11 @@ enum GAME_PAGE_EVENT_IDS {
   ID_Lobby_ContextMenu_Connect = 1002,
 };
 
+enum GAME_PAGE_PAGE_INDEX {
+  kMainPageIdxLobbiesServers = 0,
+  kMainPageIdxPlayers = 1,
+};
+
 bool MatchFilterField(std::string value,
                       std::string filter,
                       model::GameResultsColumnOrdering ordering) {
@@ -60,6 +65,22 @@ bool MatchFilterField(std::string value,
   }
 }
 
+std::string GetTabTitleWithCount(const std::string& base,
+                                 std::optional<size_t> count) {
+  if (count) {
+    return base + " (" + std::to_string(*count) + ")";
+  }
+  return base;
+}
+
+std::string GetLobbiesServersTabTitle(std::optional<size_t> results_count) {
+  return GetTabTitleWithCount("Lobbies and Servers", results_count);
+}
+
+std::string GetPlayersTabTitle(std::optional<size_t> results_count) {
+  return GetTabTitleWithCount("Players", results_count);
+}
+
 }  // namespace
 
 WxGamePage::WxGamePage(
@@ -87,11 +108,21 @@ WxGamePage::WxGamePage(
 
   // Add pages to the inner notebook
   main_panel_notebook_->AddPage(CreateMainGamePage(main_panel_notebook_),
-                                "Lobbies and Servers");
+                                GetLobbiesServersTabTitle({}));
   if (!game_model_.results_format.players_columns.empty()) {
     main_panel_notebook_->AddPage(CreatePlayersGamePage(main_panel_notebook_),
-                                  "Players");
+                                  GetPlayersTabTitle({}));
   }
+
+  main_panel_notebook_->Bind(wxEVT_LEFT_DCLICK, [&](wxMouseEvent& event) {
+    long flags = 0;
+    int tab_index = main_panel_notebook_->HitTest(event.GetPosition(), &flags);
+    if (tab_index != wxNOT_FOUND && (flags & wxNB_HITTEST_ONLABEL)) {
+      // Double-clicked on tab `tab_index`
+      TriggerSearchIfPossible();
+    }
+    event.Skip();
+  });
 
   // Layout for the toolbook page
   auto* panelSizer = new wxBoxSizer(wxVERTICAL);
@@ -610,6 +641,9 @@ void WxGamePage::OnSearchLobbiesPlayersDone(model::GamePlayersResults players) {
   players_list_->DeleteAllItems();
   players_list_->Refresh();
 
+  main_panel_notebook_->SetPageText(kMainPageIdxPlayers,
+                                    GetPlayersTabTitle(players.size()));
+
   // Append new players
   for (const auto& result : players) {
     std::vector<wxString> item_values;
@@ -668,6 +702,10 @@ void WxGamePage::RefreshResultsList() {
 
   const auto filtered_results = game_model_.results_filter_callback.Run(
       last_response_results_, GetCurrentGameFilters());
+
+  main_panel_notebook_->SetPageText(
+      kMainPageIdxLobbiesServers,
+      GetLobbiesServersTabTitle(filtered_results.lobbies.size()));
 
   // Append new results
   for (const auto& result : filtered_results.lobbies) {
