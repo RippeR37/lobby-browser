@@ -6,21 +6,28 @@ launch then. This is particularly useful for games with small player base where
 its not always possible to find a game or ones that require extra setup (e.g.
 VR games).
 
-![Lobby Browser - Pavlov lobbies and servers](https://i.imgur.com/X3zSY72.png)
+![Lobby Browser - Pavlov lobbies and servers](https://i.imgur.com/Cy1S0XR.png)
 
-### End-user Features
+### Supported games
 
-* Supported games
-  * [Pavlov](https://www.vankrupt.com/#pavlov-vr) (servers, lobbies, requires
-    owning the game on Steam)
-  * [Contractors](https://www.contractorsvr.com/home-1) (lobbies, requires
-    owning the game on Steam)
+* [Pavlov](https://www.vankrupt.com/#pavlov-vr) (servers, lobbies, requires
+  owning the game on Steam)
+* [Contractors](https://www.contractorsvr.com/home-1) (lobbies, requires
+  owning the game on Steam)
 
-* Quality of life features
-  * Auto-search - looped search with specific criterias until there are matching
-    results
-    * You can specify minimum number of players or `|`-separated substrings to
-      match game modes, map names, etc
+### Features
+
+* Browse lobbies/servers and list of active players
+* Check in-lobby players
+* Search for players
+* Mark players as favorites (in-app system)
+* Automatically connect to a lobby
+  * Allows for both connecting when a spot opens or reserving a spot before
+    joining a lobby
+* Auto-search - looped search with specific criterias until there are matching
+  lobbies/servers
+  * You can specify minimum number of players or `|`-separated substrings to
+    match game modes, map names, etc.
 
 ### Project Features
 
@@ -29,6 +36,12 @@ VR games).
   * Easily extendable for other lobby backend systems or games
 * Steam authentication in subprocess
 * Multi-game support
+* Backends support
+  * Steam
+  * EOS (custom, extended API support)
+    * Pavlov custom backend APIs
+  * Nakoma
+  * Mod.io
 
 ## How to use
 
