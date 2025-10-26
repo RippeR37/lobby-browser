@@ -432,8 +432,8 @@ void WxMainWindow::OnMinimize(wxIconizeEvent& event) {
 
 void WxMainWindow::OnAbout(wxCommandEvent&) {
   wxAboutDialogInfo info;
-  info.SetName(_(kDefaultWindowTitle));
-  info.SetVersion(_("1.1"));
+  info.SetName(kDefaultWindowTitle);
+  info.SetVersion("1.1");
   info.SetDescription(
       "\nThis is a simple application allowing you to browse online\n"
       "game servers and lobbies without having to launch games.");
