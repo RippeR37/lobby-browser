@@ -75,6 +75,8 @@ class PavlovGame : public BaseGame {
                               backend::eos::FetchUsersInfoResponse response);
   void TryResolvePendingServerLobbyDetailsRequest(bool force);
 
+  bool IsPlayerInFavorties(const std::string& player_id) const;
+
   pavlov::PavlovConfig config_;
   std::unique_ptr<backend::EosLobbyBackend> lobby_backend_;
   pavlov::PavlovPlayersDataStore players_data_store_;

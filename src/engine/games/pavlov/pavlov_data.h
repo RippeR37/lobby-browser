@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -65,6 +66,7 @@ struct PavlovFilters {
 struct PavlovConfig {
   std::string game_version;
   PavlovFilters filters;
+  std::set<std::string> favorite_players;
 };
 
 struct PavlovServer {

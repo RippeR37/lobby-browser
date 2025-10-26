@@ -283,7 +283,9 @@ void EosLobbyBackend::OnSearchLobbiesResponse(
     std::move(on_done_callback)
         .Run(Result{Result::Status::kOk, ""}, std::move(eos_response));
   } catch (const std::exception& e) {
-    LOG(ERROR) << __FUNCTION__ << "() failed to parse response: " << e.what();
+    LOG(ERROR) << __FUNCTION__ << "() failed to parse response: " << e.what()
+               << "\n"
+               << std::string(response.data.begin(), response.data.end());
     std::move(on_done_callback)
         .Run(Result{Result::Status::kFailed,
                     "Failed to parse response from EOS:\n" +

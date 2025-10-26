@@ -175,6 +175,10 @@ PavlovGame::PavlovGame(SetStatusTextCallback set_status_text,
 PavlovGame::~PavlovGame() = default;
 
 model::Game PavlovGame::GetModel() const {
+  const bool has_favorites = !config_.favorite_players.empty();
+
+  const auto players_favorites_width = has_favorites ? 20 : 0;
+
   return model::Game{
       "Pavlov",
       "IDI_ICON_PAVLOV",
@@ -251,9 +255,16 @@ model::Game PavlovGame::GetModel() const {
                   model::GameResultsColumnOrdering::kString,
               },
               model::GameResultsColumnFormat{
+                  "",
+                  true,
+                  players_favorites_width,
+                  model::GameResultsColumnAlignment::kCenter,
+                  model::GameResultsColumnOrdering::kString,
+              },
+              model::GameResultsColumnFormat{
                   "Player Name",
                   true,
-                  200,
+                  200 - players_favorites_width,
                   model::GameResultsColumnAlignment::kLeft,
                   model::GameResultsColumnOrdering::kString,
               },
@@ -702,14 +713,23 @@ void PavlovGame::StoreAndConvertSearchResults(
 
       for (const auto& member_id : result.member_ids) {
         auto player_name = member_id;
-        if (auto player_data =
-                players_data_store_.GetCachedDataFor(member_id)) {
+        const auto player_data =
+            players_data_store_.GetCachedDataFor(member_id);
+        if (player_data) {
           player_name = player_data->name;
         }
+
+        const auto favorites_icon = std::string{"⭐"};
+        const auto is_in_favorites =
+            IsPlayerInFavorties(member_id) ||
+            (player_data && IsPlayerInFavorties(player_data->platform_id));
+
+        const auto icon = is_in_favorites ? favorites_icon : "";
 
         model_response.results.players.emplace_back(
             model::GameServerLobbyResult{{
                 result.id,
+                icon,
                 player_name,
                 result.name_owner,
                 result.gamemode,
@@ -823,6 +843,10 @@ void PavlovGame::TryResolvePendingServerLobbyDetailsRequest(bool force) {
   auto on_done_callback = std::move(pending_search_details_request_->second);
   pending_search_details_request_.reset();
   std::move(on_done_callback).Run(std::move(response));
+}
+
+bool PavlovGame::IsPlayerInFavorties(const std::string& player_id) const {
+  return config_.favorite_players.count(player_id) > 0;
 }
 
 }  // namespace engine::game

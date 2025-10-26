@@ -163,11 +163,15 @@ void to_json(nlohmann::json& out, const PavlovConfig& obj) {
       {"game_version", obj.game_version},
       {"filters", obj.filters},
   };
+  if (!obj.favorite_players.empty()) {
+    out["favorite_players"] = obj.favorite_players;
+  }
 }
 
 void from_json(const nlohmann::json& in, PavlovConfig& obj) {
   obj.game_version = in.value("game_version", "");
   obj.filters = in.value("filters", PavlovFilters{});
+  obj.favorite_players = in.value("favorite_players", std::set<std::string>{});
 }
 
 void from_json(const nlohmann::json& in, PavlovServer& obj) {
