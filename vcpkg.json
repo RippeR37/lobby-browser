@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
-  "builtin-baseline": "d7a13425bd701f4897dd5ec54a81a6882d0d21e5",
+  "builtin-baseline": "d5a87c6bcc5d3cb3f5627bfeff977280097c719c",
   "dependencies": [
     {
       "name": "ripper37-libbase",

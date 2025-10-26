@@ -432,9 +432,9 @@ void WxMainWindow::OnAbout(wxCommandEvent&) {
   info.SetName(_(kDefaultWindowTitle));
   info.SetVersion(_("1.0.1"));
   info.SetDescription(
-      _("\nThis is a simple application allowing you to browse online\n"
-        "game servers and lobbies without having to launch games."));
-  info.SetCopyright(wxT("(C) 2025 RippeR37"));
+      "\nThis is a simple application allowing you to browse online\n"
+      "game servers and lobbies without having to launch games.");
+  info.SetCopyright("(C) 2025 RippeR37");
   wxAboutBox(info);
 }
 
