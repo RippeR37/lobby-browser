@@ -232,8 +232,10 @@ void WxGamePage::TriggerSearchIfPossible() {
 
   results_list_->SetBackgroundColour(theme_colors_.ListLoadingBg);
   results_list_->Refresh();
-  players_list_->SetBackgroundColour(theme_colors_.ListLoadingBg);
-  players_list_->Refresh();
+  if (players_list_) {
+    players_list_->SetBackgroundColour(theme_colors_.ListLoadingBg);
+    players_list_->Refresh();
+  }
 
   auto current_filters = GetCurrentGameFilters();
   event_handler_->OnSearchLobbiesAndServers(
