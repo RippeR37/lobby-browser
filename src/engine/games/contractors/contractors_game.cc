@@ -286,6 +286,17 @@ void ContractorsGame::GetServerLobbyDetails(
   std::move(on_done_callback).Run(model::SearchDetailsResponse{true, {}});
 }
 
+void ContractorsGame::SearchUsers(
+    model::SearchUsersRequest request,
+    base::OnceCallback<void(model::SearchUsersResponse)> on_done_callback) {
+  (void)request;
+
+  // Unsupported
+  std::move(on_done_callback)
+      .Run(model::SearchUsersResponse{
+          model::SearchResult::kUnsupported, "", {}});
+}
+
 void ContractorsGame::OnModsFetched() {
   DCHECK(mod_backend_->IsReady());
 

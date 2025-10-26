@@ -20,4 +20,9 @@ void from_json(const nlohmann::json& in, ProductUserAccount& obj);
 void from_json(const nlohmann::json& in, ProductUser& obj);
 void from_json(const nlohmann::json& in, FetchUsersInfoResponse& obj);
 
+void to_json(nlohmann::json& out, const SearchUsersRequest& obj);
+
+void from_json(const nlohmann::json& in, SearchUsersPlayer& obj);
+void from_json(const nlohmann::json& in, SearchUsersResponse& obj);
+
 }  // namespace engine::backend::eos

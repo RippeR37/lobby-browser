@@ -26,6 +26,10 @@ class EventHandler {
       model::SearchDetailsRequest request,
       base::OnceCallback<void(model::SearchDetailsResponse)>
           on_done_callback) = 0;
+  virtual void OnSearchUsers(
+      model::SearchUsersRequest request,
+      base::OnceCallback<void(model::SearchUsersResponse)>
+          on_done_callback) = 0;
 
   virtual void UpdateGameConfig(std::string game_name,
                                 model::GameFilters filters) = 0;

@@ -1,6 +1,9 @@
 #include "engine/games/pavlov/pavlov_game.h"
 
+#include <format>
+#include <iostream>
 #include <memory>
+#include <sstream>
 #include <string>
 
 #include "base/barrier_callback.h"
@@ -142,6 +145,17 @@ model::GameSearchResults FilterModelResultsFunction(
 
   filtered_results.players = unfiltered_results.players;
   return filtered_results;
+}
+
+std::string ConvertTimestamp(const std::string input_time) {
+  std::istringstream in{input_time};
+  std::chrono::sys_seconds tp;
+  in >> std::chrono::parse("%FT%T%EZ", tp);
+  if (in.fail()) {
+    return input_time;
+  }
+  std::chrono::zoned_time local_time{std::chrono::current_zone(), tp};
+  return std::format("{0:%F %T}", local_time);
 }
 }  // namespace
 
@@ -399,6 +413,17 @@ void PavlovGame::GetServerLobbyDetails(
       std::make_pair(std::move(request), std::move(on_done_callback));
 
   TryResolvePendingServerLobbyDetailsRequest(false);
+}
+
+void PavlovGame::SearchUsers(
+    model::SearchUsersRequest request,
+    base::OnceCallback<void(model::SearchUsersResponse)> on_done_callback) {
+  SetStatusText("Searching users...");
+
+  lobby_backend_->SearchUsers(
+      backend::eos::SearchUsersRequest{request.user_name},
+      base::BindOnce(&PavlovGame::OnSearchUsersDone, weak_this_,
+                     std::move(on_done_callback)));
 }
 
 // static
@@ -755,15 +780,11 @@ void PavlovGame::StoreAndConvertSearchResults(
     std::vector<std::string> unknown_user_ids =
         players_data_store_.OnNewUserIds(std::move(current_user_ids));
     if (!unknown_user_ids.empty()) {
-      FetchPlayersData(std::move(unknown_user_ids));
+      lobby_backend_->FetchUsersInfo(
+          backend::eos::FetchUsersInfoRequest{std::move(unknown_user_ids)},
+          base::BindOnce(&PavlovGame::OnFetchPlayersDataDone, weak_this_));
     }
   }
-}
-
-void PavlovGame::FetchPlayersData(std::vector<std::string> user_ids) {
-  lobby_backend_->FetchUsersInfo(
-      backend::eos::FetchUsersInfoRequest{std::move(user_ids)},
-      base::BindOnce(&PavlovGame::OnFetchPlayersDataDone, weak_this_));
 }
 
 void PavlovGame::OnFetchPlayersDataDone(
@@ -843,6 +864,70 @@ void PavlovGame::TryResolvePendingServerLobbyDetailsRequest(bool force) {
   auto on_done_callback = std::move(pending_search_details_request_->second);
   pending_search_details_request_.reset();
   std::move(on_done_callback).Run(std::move(response));
+}
+
+void PavlovGame::OnSearchUsersDone(
+    base::OnceCallback<void(model::SearchUsersResponse)> on_done_callback,
+    backend::Result result,
+    backend::eos::SearchUsersResponse response) {
+  SetStatusText("Received users data (" +
+                std::to_string(response.players.size()) + ")");
+
+  if (result.status != backend::Result::Status::kOk) {
+    std::move(on_done_callback)
+        .Run(model::SearchUsersResponse{
+            model::SearchResult::kError, result.error, {}});
+    return;
+  }
+
+  std::vector<std::string> missing_data_ids;
+  for (auto& player : response.players) {
+    if (!players_data_store_.GetCachedDataFor(player.id)) {
+      missing_data_ids.push_back(player.id);
+    }
+  }
+
+  if (!missing_data_ids.empty()) {
+    // Fetch user data and then fill it
+    lobby_backend_->FetchUsersInfo(
+        backend::eos::FetchUsersInfoRequest{std::move(missing_data_ids)},
+        base::BindOnce(&PavlovGame::OnFetchPlayersDataDone, weak_this_)
+            .Then(base::BindOnce(&PavlovGame::OnSearchUsersWithDetailsDone,
+                                 weak_this_, std::move(on_done_callback),
+                                 std::move(response))));
+    return;
+  }
+
+  OnSearchUsersWithDetailsDone(std::move(on_done_callback),
+                               std::move(response));
+}
+
+void PavlovGame::OnSearchUsersWithDetailsDone(
+    base::OnceCallback<void(model::SearchUsersResponse)> on_done_callback,
+    backend::eos::SearchUsersResponse response) {
+  std::vector<model::SearchUserEntry> results;
+  for (auto& player : response.players) {
+    auto last_seen = std::string{};
+    if (auto data = players_data_store_.GetCachedDataFor(player.id)) {
+      last_seen = ConvertTimestamp(data->last_login);
+    }
+    results.emplace_back(model::SearchUserEntry{
+        player.display_name,
+        {
+            {"Platform", player.platform},
+            {"Platform ID", player.platform_id},
+            {"Last seen", last_seen},
+            {"ID", player.id},
+        },
+    });
+  }
+
+  std::move(on_done_callback)
+      .Run(model::SearchUsersResponse{
+          model::SearchResult::kOk,
+          "",
+          std::move(results),
+      });
 }
 
 bool PavlovGame::IsPlayerInFavorties(const std::string& player_id) const {

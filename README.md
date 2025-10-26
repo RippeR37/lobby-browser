@@ -49,7 +49,7 @@ VR games).
 
 Project is written in C++ and requires:
 
-* C++ compiler with C++17 support,
+* C++ compiler with C++20 support,
   * Tested with MSVC 2022 and Clang 19/20
 * CMake
 * vcpkg

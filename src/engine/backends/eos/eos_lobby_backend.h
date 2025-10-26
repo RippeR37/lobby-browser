@@ -32,6 +32,9 @@ class EosLobbyBackend : public LobbyBackend {
       eos::FetchUsersInfoRequest request,
       base::OnceCallback<void(Result, eos::FetchUsersInfoResponse)>
           on_done_callback);
+  void SearchUsers(eos::SearchUsersRequest request,
+                   base::OnceCallback<void(Result, eos::SearchUsersResponse)>
+                       on_done_callback);
 
  private:
   void StartAuthenticateViaSteam();
@@ -49,6 +52,10 @@ class EosLobbyBackend : public LobbyBackend {
       base::OnceCallback<void(Result, eos::FetchUsersInfoResponse)>
           on_done_callback,
       std::optional<Result> error_result);
+  void DoSearchUsers(std::string json_request,
+                     base::OnceCallback<void(Result, eos::SearchUsersResponse)>
+                         on_done_callback,
+                     std::optional<Result> error_result);
   void OnSearchLobbiesResponse(
       base::OnceCallback<void(Result, eos::SearchLobbiesResponse)>
           on_done_callback,
@@ -57,12 +64,17 @@ class EosLobbyBackend : public LobbyBackend {
       base::OnceCallback<void(Result, eos::FetchUsersInfoResponse)>
           on_done_callback,
       std::vector<base::net::ResourceResponse> responses);
+  void OnSearchUsersResponse(
+      base::OnceCallback<void(Result, eos::SearchUsersResponse)>
+          on_done_callback,
+      base::net::ResourceResponse response);
 
   std::string auth_init_token_;
   std::string deployment_id_;
   std::string nonce_;
   std::unique_ptr<SteamAuthBackend> steam_auth_backend_;
-  AuthToken<std::string> auth_token_;
+  AuthToken<std::string> access_token_;
+  AuthToken<std::string> id_token_;
 
   bool pending_auth_response_;
   std::vector<base::OnceCallback<void(std::optional<Result>)>>

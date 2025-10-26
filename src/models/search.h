@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "base/callback.h"
@@ -18,6 +19,7 @@ enum SearchResult {
   kOk,
   kAborted,
   kError,
+  kUnsupported,
 };
 
 struct SearchResponse {
@@ -43,6 +45,22 @@ struct SearchDetailsResponse {
 
   bool all_members_known;
   std::vector<Member> members;
+};
+
+struct SearchUsersRequest {
+  std::string game_name;
+  std::string user_name;
+};
+
+struct SearchUserEntry {
+  std::string user_name;
+  std::vector<std::pair<std::string, std::string>> user_data;
+};
+
+struct SearchUsersResponse {
+  SearchResult result;
+  std::string error;
+  std::vector<SearchUserEntry> results;
 };
 
 }  // namespace model

@@ -276,8 +276,9 @@ wxDataViewCtrl* WxGamePage::CreateMainGamePageLobbyListCtrl(
                                     alignment, flags);
   }
 
-  results_list_->Bind(wxEVT_DATAVIEW_ITEM_ACTIVATED,
-                      [=](wxDataViewEvent& event) { OnRowEntered(event); });
+  results_list_->Bind(
+      wxEVT_DATAVIEW_ITEM_ACTIVATED,
+      [=, this](wxDataViewEvent& event) { OnRowEntered(event); });
 
   return results_list_;
 }
@@ -306,8 +307,8 @@ wxPanel* WxGamePage::CreateMainGamePageDetailsPanel(wxWindow* parent) {
   details_panel_sizer->Add(search_button_, 0, wxALIGN_CENTER | wxTOP, 10);
 
   // Bind callback
-  search_button_->Bind(wxEVT_BUTTON,
-                       [=](wxCommandEvent&) { TriggerSearchIfPossible(); });
+  search_button_->Bind(
+      wxEVT_BUTTON, [=, this](wxCommandEvent&) { TriggerSearchIfPossible(); });
 
   return details_panel;
 }
@@ -333,8 +334,9 @@ wxPanel* WxGamePage::CreateMainGamePageDetailsFilterPanel(wxWindow* parent) {
 
       checkbox->SetValue(option.enabled);
       if (option.refresh_on_change) {
-        checkbox->Bind(wxEVT_CHECKBOX,
-                       [=](const wxCommandEvent&) { RefreshResultsList(); });
+        checkbox->Bind(wxEVT_CHECKBOX, [=, this](const wxCommandEvent&) {
+          RefreshResultsList();
+        });
       }
 
       box_grid->Add(checkbox, 0, wxALL, 5);
@@ -362,7 +364,7 @@ wxPanel* WxGamePage::CreateMainGamePageDetailsDetailsPanel(wxWindow* parent) {
   // Install message handler with the name wx_msg
   details_panel_->AddScriptMessageHandler("wxWebView");
   details_panel_->Bind(
-      wxEVT_WEBVIEW_SCRIPT_MESSAGE_RECEIVED, [=](wxWebViewEvent& evt) {
+      wxEVT_WEBVIEW_SCRIPT_MESSAGE_RECEIVED, [=, this](wxWebViewEvent& evt) {
         if (evt.GetMessageHandler() == "wxWebView") {
           if (evt.GetString() == "keydown_F5") {
             TriggerSearchIfPossible();
@@ -448,7 +450,7 @@ wxDataViewCtrl* WxGamePage::CreateGamePagePlayersListCtrl(
 
   players_list_->Bind(
       wxEVT_DATAVIEW_ITEM_ACTIVATED,
-      [=](wxDataViewEvent& event) { OnPlayersRowEntered(event); });
+      [=, this](wxDataViewEvent& event) { OnPlayersRowEntered(event); });
 
   return players_list_;
 }
@@ -569,6 +571,8 @@ void WxGamePage::OnServerLobbyDetailsReceived(
     // again but this time ask it to wait until they became known.
     RequestSelectedLobbyDetails(true);
   }
+
+  results_list_->SetFocus();
 }
 
 void WxGamePage::RefreshResultsList() {

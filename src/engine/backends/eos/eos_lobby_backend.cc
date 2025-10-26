@@ -22,6 +22,10 @@ std::string GetLobbyUrl(const std::string& eos_deployment_id) {
   return "https://api.epicgames.dev/lobby/v1/" + eos_deployment_id +
          "/lobbies/filter";
 }
+
+const auto* kSearchUsersUrl =
+    "https://prod-crossplay-pavlov-ms.vankrupt.net/friends/v1/search";
+const auto kSearchUsersTimeout = base::Seconds(15);
 }  // namespace
 
 EosLobbyBackend::EosLobbyBackend(
@@ -59,7 +63,7 @@ void EosLobbyBackend::SearchLobbies(
     return;
   }
 
-  if (!auth_token_.IsValid()) {
+  if (!access_token_.IsValid()) {
     requests_pending_auth_.emplace_back(
         base::BindOnce(&EosLobbyBackend::DoSearchLobbies, weak_this_,
                        json_request.dump(), std::move(on_done_callback)));
@@ -100,7 +104,7 @@ void EosLobbyBackend::FetchUsersInfo(
     }
   }
 
-  if (!auth_token_.IsValid()) {
+  if (!access_token_.IsValid()) {
     requests_pending_auth_.emplace_back(base::BindOnce(
         &EosLobbyBackend::DoFetchUsersInfo, weak_this_,
         std::move(serialized_requests), std::move(on_done_callback)));
@@ -112,6 +116,37 @@ void EosLobbyBackend::FetchUsersInfo(
 
   DoFetchUsersInfo(std::move(serialized_requests), std::move(on_done_callback),
                    {});
+}
+
+void EosLobbyBackend::SearchUsers(
+    eos::SearchUsersRequest request,
+    base::OnceCallback<void(Result, eos::SearchUsersResponse)>
+        on_done_callback) {
+  nlohmann::json json_request;
+  try {
+    json_request = request;
+  } catch (const std::exception& e) {
+    LOG(ERROR) << __FUNCTION__
+               << "() failed to serialize request: " << e.what();
+    std::move(on_done_callback)
+        .Run(Result{Result::Status::kFailed,
+                    "Failed to serialize search request" +
+                        std::string(e.what())},
+             {});
+    return;
+  }
+
+  if (!id_token_.IsValid()) {
+    requests_pending_auth_.emplace_back(
+        base::BindOnce(&EosLobbyBackend::DoSearchUsers, weak_this_,
+                       json_request.dump(), std::move(on_done_callback)));
+    if (!pending_auth_response_) {
+      StartAuthenticateViaSteam();
+    }
+    return;
+  }
+
+  DoSearchUsers(json_request.dump(), std::move(on_done_callback), {});
 }
 
 void EosLobbyBackend::StartAuthenticateViaSteam() {
@@ -182,8 +217,13 @@ void EosLobbyBackend::OnEosAuthResponse(base::net::ResourceResponse response) {
         }
       }
 
-      auth_token_ =
+      access_token_ =
           AuthToken<std::string>(access_token.get<std::string>(), auth_ttl);
+
+      if (json.contains("id_token") && json["id_token"].is_string()) {
+        id_token_ = AuthToken<std::string>(json["id_token"].get<std::string>(),
+                                           auth_ttl);
+      }
     }
   }
 
@@ -207,7 +247,7 @@ void EosLobbyBackend::DoSearchLobbies(
     base::OnceCallback<void(Result, eos::SearchLobbiesResponse)>
         on_done_callback,
     std::optional<Result> error_result) {
-  if (!auth_token_.IsValid()) {
+  if (!access_token_.IsValid()) {
     std::move(on_done_callback)
         .Run(error_result.value_or(
                  Result{Result::Status::kAuthFailed, "Failed to authenticate"}),
@@ -219,7 +259,7 @@ void EosLobbyBackend::DoSearchLobbies(
   base::net::SimpleUrlLoader::DownloadLimited(
       base::net::ResourceRequest{GetLobbyUrl(deployment_id_)}
           .WithHeaders({
-              std::string("Authorization: Bearer ") + *auth_token_.GetToken(),
+              std::string("Authorization: Bearer ") + *access_token_.GetToken(),
               std::string("Content-Type: application/json"),
           })
           .WithPostData(std::move(json_request))
@@ -234,7 +274,7 @@ void EosLobbyBackend::DoFetchUsersInfo(
     base::OnceCallback<void(Result, eos::FetchUsersInfoResponse)>
         on_done_callback,
     std::optional<Result> error_result) {
-  if (!auth_token_.IsValid()) {
+  if (!access_token_.IsValid()) {
     std::move(on_done_callback)
         .Run(error_result.value_or(
                  Result{Result::Status::kAuthFailed, "Failed to authenticate"}),
@@ -253,13 +293,41 @@ void EosLobbyBackend::DoFetchUsersInfo(
     base::net::SimpleUrlLoader::DownloadLimited(
         base::net::ResourceRequest{kFetchUsersInfoUrl}
             .WithHeaders({
-                std::string("Authorization: Bearer ") + *auth_token_.GetToken(),
+                std::string("Authorization: Bearer ") +
+                    *access_token_.GetToken(),
                 std::string("Content-Type: application/json"),
             })
             .WithPostData(std::move(json_request))
             .WithTimeout(kFetchUsersInfoTimeout),
         kMaxResponseSize, chunk_response_callback);
   }
+}
+
+void EosLobbyBackend::DoSearchUsers(
+    std::string json_request,
+    base::OnceCallback<void(Result, eos::SearchUsersResponse)> on_done_callback,
+    std::optional<Result> error_result) {
+  if (!id_token_.IsValid()) {
+    std::move(on_done_callback)
+        .Run(error_result.value_or(
+                 Result{Result::Status::kAuthFailed, "Failed to authenticate"}),
+             eos::SearchUsersResponse{});
+    return;
+  }
+
+  const auto kMaxResponseSize = 5 * 1024 * 1024;
+  base::net::SimpleUrlLoader::DownloadLimited(
+      base::net::ResourceRequest{kSearchUsersUrl}
+          .WithHeaders({
+              std::string("access-token: ") + *id_token_.GetToken(),
+              std::string("Content-Type: text/json"),
+              std::string("User-Agent: Pavlov VR Game Client"),
+          })
+          .WithPostData(std::move(json_request))
+          .WithTimeout(kSearchUsersTimeout),
+      kMaxResponseSize,
+      base::BindOnce(&EosLobbyBackend::OnSearchUsersResponse, weak_this_,
+                     std::move(on_done_callback)));
 }
 
 void EosLobbyBackend::OnSearchLobbiesResponse(
@@ -317,6 +385,37 @@ void EosLobbyBackend::OnFetchUsersInfoResponse(
 
   std::move(on_done_callback)
       .Run(Result{Result::Status::kOk, ""}, std::move(combined_response));
+}
+
+void EosLobbyBackend::OnSearchUsersResponse(
+    base::OnceCallback<void(Result, eos::SearchUsersResponse)> on_done_callback,
+    base::net::ResourceResponse response) {
+  if (response.result != base::net::Result::kOk) {
+    std::move(on_done_callback)
+        .Run(
+            Result{Result::Status::kFailed,
+                   "Failed to search users in EOS (" +
+                       std::to_string(response.code) + "):\n" +
+                       std::string(response.data.begin(), response.data.end())},
+            eos::SearchUsersResponse{});
+    return;
+  }
+
+  try {
+    nlohmann::json json_response = nlohmann::json::parse(response.data);
+    eos::SearchUsersResponse eos_response = json_response;
+    std::move(on_done_callback)
+        .Run(Result{Result::Status::kOk, ""}, std::move(eos_response));
+  } catch (const std::exception& e) {
+    LOG(ERROR) << __FUNCTION__ << "() failed to parse response: " << e.what()
+               << "\n"
+               << std::string(response.data.begin(), response.data.end());
+    std::move(on_done_callback)
+        .Run(Result{Result::Status::kFailed,
+                    "Failed to parse response from EOS:\n" +
+                        std::string(e.what())},
+             eos::SearchUsersResponse{});
+  }
 }
 
 }  // namespace engine::backend

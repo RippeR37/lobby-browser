@@ -73,6 +73,12 @@ void Application::OnServerLobbyDetailsRequested(
                                  std::move(on_done_callback));
 }
 
+void Application::OnSearchUsers(
+    model::SearchUsersRequest request,
+    base::OnceCallback<void(model::SearchUsersResponse)> on_done_callback) {
+  engine_->SearchUsers(std::move(request), std::move(on_done_callback));
+}
+
 void Application::UpdateGameConfig(std::string game_name,
                                    model::GameFilters filters) {
   engine_->UpdateGameConfig(std::move(game_name), std::move(filters));

@@ -143,6 +143,25 @@ void AppEngineImpl::GetServerLobbyDetails(
   game.GetServerLobbyDetails(std::move(request), std::move(on_done_callback));
 }
 
+void AppEngineImpl::SearchUsers(
+    model::SearchUsersRequest request,
+    base::OnceCallback<void(model::SearchUsersResponse)> on_done_callback) {
+  auto game_it = games_.find(request.game_name);
+  if (game_it == games_.end()) {
+    presenter_->ReportMessage(Presenter::MessageType::kError,
+                              "Failed to search lobbies for '" +
+                                  request.game_name + "' - game not found",
+                              "");
+    std::move(on_done_callback)
+        .Run(model::SearchUsersResponse{
+            model::SearchResult::kError, "Game not found", {}});
+    return;
+  }
+
+  auto& game = *game_it->second;
+  game.SearchUsers(std::move(request), std::move(on_done_callback));
+}
+
 void AppEngineImpl::UpdateGameConfig(std::string game_name,
                                      model::GameFilters filters) {
   auto game_it = games_.find(game_name);

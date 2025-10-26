@@ -14,6 +14,7 @@
 
 #include "ui/wx/wx_auto_search_dialog.h"
 #include "ui/wx/wx_preferences_dialog.h"
+#include "ui/wx/wx_search_players_results_dialog.h"
 
 namespace ui::wx {
 
@@ -22,11 +23,12 @@ const auto kDefaultWindowTitle = "Lobby Browser";
 const auto kDefaultWindowSize = wxSize(1200, 800);
 
 enum MAIN_WINDOW_EVENT_IDS {
-  // ID_Menu_File_SearchOnStartup = 1,
-  ID_Menu_File_AutoSearch = 2,
+  ID_Menu_File_AutoSearch = 1,
+  ID_Menu_File_SearchPlayers = 2,
+  ID_Menu_File_Refresh = 3,
 
-  ID_Menu_File_Settings_Games = 3,
-  ID_Menu_File_Settings_Preferences = 4,
+  ID_Menu_File_Settings_Games = 4,
+  ID_Menu_File_Settings_Preferences = 5,
 
   ID_Button_Search = 100,
 };
@@ -109,6 +111,10 @@ WxMainWindow::WxMainWindow(
         ID_Menu_File_AutoSearch, "Auto search",
         "Enables looped search for server/lobby with given criteria until any "
         "are found");
+    application_menu->Append(ID_Menu_File_SearchPlayers, "Search players\tF3",
+                             "Search players in current game");
+    application_menu->Append(ID_Menu_File_Refresh, "Refresh\tF5",
+                             "Search lobbies and servers for current game");
     application_menu->AppendSeparator();
 
     auto* settings = new wxMenu();
@@ -129,11 +135,19 @@ WxMainWindow::WxMainWindow(
     SetMenuBar(menu_bar);
 
     Bind(
-        wxEVT_MENU, [=](const wxCommandEvent&) { OnAutoSearchChanged(); },
+        wxEVT_MENU, [=, this](const wxCommandEvent&) { OnAutoSearchChanged(); },
         ID_Menu_File_AutoSearch);
     Bind(
         wxEVT_MENU,
-        [=](const wxCommandEvent&) {
+        [=, this](const wxCommandEvent&) { RefreshResultsForCurrentGame(); },
+        ID_Menu_File_Refresh);
+    Bind(
+        wxEVT_MENU,
+        [=, this](const wxCommandEvent&) { BringPlayerSearchDialog(); },
+        ID_Menu_File_SearchPlayers);
+    Bind(
+        wxEVT_MENU,
+        [=, this](const wxCommandEvent&) {
           std::set<std::string> currently_enabled_games;
           for (const auto& [game, game_page] : game_pages_) {
             currently_enabled_games.insert(game);
@@ -153,7 +167,7 @@ WxMainWindow::WxMainWindow(
         ID_Menu_File_Settings_Games);
     Bind(
         wxEVT_MENU,
-        [=](const wxCommandEvent&) {
+        [=, this](const wxCommandEvent&) {
           WxPreferencesDialog dlg(this, &*config_);
           dlg.ShowModal();
         },
@@ -413,11 +427,7 @@ void WxMainWindow::OnExit(wxCommandEvent&) {
 
 void WxMainWindow::OnKeyDown(wxKeyEvent& event) {
   switch (event.GetKeyCode()) {
-    case WXK_F5:
-      if (auto* current_game = GetCurrentGamePage()) {
-        current_game->TriggerSearchIfPossible();
-      }
-      break;
+    // case WXK_<...>:
   }
   event.Skip();
 }
@@ -493,6 +503,16 @@ std::string WxMainWindow::GetCurrentGameName() const {
   throw std::out_of_range{"Could not find current game page"};
 }
 
+void WxMainWindow::BringPlayerSearchDialog() {
+  wxTextEntryDialog dlg{this, "Search players with name:", "Player search"};
+  if (dlg.ShowModal() == wxID_OK) {
+    event_handler_->OnSearchUsers(
+        model::SearchUsersRequest{GetCurrentGameName(),
+                                  dlg.GetValue().ToStdString()},
+        base::BindOnce(&WxMainWindow::OnSearchUsersDone, weak_this_));
+  }
+}
+
 void WxMainWindow::StartAutoSearch() {
   auto* game_page = GetCurrentGamePage();
   if (!game_page) {
@@ -540,6 +560,23 @@ void WxMainWindow::OnAutoSearchDone(size_t matching_count) {
                              " result(s) matching specified criteria.");
   lobby_found_msg.UseTaskBarIcon(tray_icon_.get());
   lobby_found_msg.Show(static_cast<int>(kNotificationAutoHide.InSeconds()));
+}
+
+void WxMainWindow::OnSearchUsersDone(model::SearchUsersResponse response) {
+  if (response.result != model::SearchResult::kOk) {
+    wxMessageDialog{this, "Failed to search players: " + response.error,
+                    "Player search results"}
+        .ShowModal();
+    return;
+  }
+
+  if (response.results.empty()) {
+    wxMessageDialog{this, "No players found", "Player search results"}
+        .ShowModal();
+    return;
+  }
+
+  WxPlayerSearchResultsDialog{this, response.results}.ShowModal();
 }
 
 }  // namespace ui::wx

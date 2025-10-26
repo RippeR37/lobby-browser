@@ -20,6 +20,9 @@ class Game {
       model::SearchDetailsRequest request,
       base::OnceCallback<void(model::SearchDetailsResponse)>
           on_done_callback) = 0;
+  virtual void SearchUsers(model::SearchUsersRequest request,
+                           base::OnceCallback<void(model::SearchUsersResponse)>
+                               on_done_callback) = 0;
 };
 
 }  // namespace engine::game

@@ -34,6 +34,9 @@ class ContractorsGame : public BaseGame {
       model::SearchDetailsRequest request,
       base::OnceCallback<void(model::SearchDetailsResponse)> on_done_callback)
       override;
+  void SearchUsers(model::SearchUsersRequest request,
+                   base::OnceCallback<void(model::SearchUsersResponse)>
+                       on_done_callback) override;
 
  private:
   void OnModsFetched();

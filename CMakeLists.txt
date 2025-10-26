@@ -46,12 +46,13 @@ endif()
 
 # lobby_browser
 add_executable(lobby_browser
-    WIN32
-    "")
+  WIN32
+  ""
+)
 
 target_compile_features(lobby_browser
   PUBLIC
-    cxx_std_17
+    cxx_std_20
 )
 
 target_compile_definitions(lobby_browser
@@ -167,6 +168,8 @@ target_sources(lobby_browser
     src/ui/wx/wx_presenter.h
     src/ui/wx/wx_results_list_model.cc
     src/ui/wx/wx_results_list_model.h
+    src/ui/wx/wx_search_players_results_dialog.cc
+    src/ui/wx/wx_search_players_results_dialog.h
     src/ui/wx/wx_tray_icon.cc
     src/ui/wx/wx_tray_icon.h
     src/ui/wx/wx_ui_config.cc
@@ -191,7 +194,7 @@ add_executable(steam_auth_client "")
 
 target_compile_features(steam_auth_client
   PUBLIC
-    cxx_std_17
+    cxx_std_20
 )
 
 target_compile_definitions(steam_auth_client

@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "base/memory/weak_ptr.h"
+#include "base/threading/thread.h"
 #include "wx/frame.h"
 #include "wx/panel.h"
 #include "wx/toolbook.h"
@@ -66,9 +67,13 @@ class WxMainWindow : public wxFrame, public WxTrayIcon::Client {
   std::string GetGameNameByPageIdx(std::size_t page_idx) const;
   std::string GetCurrentGameName() const;
 
+  void BringPlayerSearchDialog();
+
   void StartAutoSearch();
   void StopAutoSearch();
   void OnAutoSearchDone(size_t matching_count);
+
+  void OnSearchUsersDone(model::SearchUsersResponse response);
 
   EventHandler* event_handler_;
   base::RepeatingCallback<

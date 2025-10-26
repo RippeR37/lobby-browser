@@ -7,12 +7,14 @@ namespace ui::wx {
 WxTrayIcon::WxTrayIcon(Client* client) : client_(client) {
   Bind(
       wxEVT_TASKBAR_LEFT_DOWN,
-      [=](const wxTaskBarIconEvent&) { RestoreClient(); }, wxID_ANY);
+      [=, this](const wxTaskBarIconEvent&) { RestoreClient(); }, wxID_ANY);
 
   Bind(
-      wxEVT_MENU, [=](const wxCommandEvent&) { RestoreClient(); },
+      wxEVT_MENU, [=, this](const wxCommandEvent&) { RestoreClient(); },
       ID_TRAY_RESTORE);
-  Bind(wxEVT_MENU, [=](const wxCommandEvent&) { QuitClient(); }, ID_TRAY_EXIT);
+  Bind(
+      wxEVT_MENU, [=, this](const wxCommandEvent&) { QuitClient(); },
+      ID_TRAY_EXIT);
 }
 
 void WxTrayIcon::OnLeftButtonClick(wxTaskBarIconEvent&) {

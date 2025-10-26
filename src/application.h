@@ -26,6 +26,9 @@ class Application : public wxApp, public ui::EventHandler {
       model::SearchDetailsRequest request,
       base::OnceCallback<void(model::SearchDetailsResponse)> on_done_callback)
       override;
+  void OnSearchUsers(model::SearchUsersRequest request,
+                     base::OnceCallback<void(model::SearchUsersResponse)>
+                         on_done_callback) override;
   void UpdateGameConfig(std::string game_name,
                         model::GameFilters filters) override;
   void UpdateUiConfig(model::UiConfig config) override;

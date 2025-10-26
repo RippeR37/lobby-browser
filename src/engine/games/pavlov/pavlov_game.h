@@ -37,6 +37,9 @@ class PavlovGame : public BaseGame {
       model::SearchDetailsRequest request,
       base::OnceCallback<void(model::SearchDetailsResponse)> on_done_callback)
       override;
+  void SearchUsers(model::SearchUsersRequest request,
+                   base::OnceCallback<void(model::SearchUsersResponse)>
+                       on_done_callback) override;
 
  private:
   static pavlov::PavlovSearchResponse CombineSearchResponses(
@@ -70,10 +73,16 @@ class PavlovGame : public BaseGame {
   void StoreAndConvertSearchResults(
       base::OnceCallback<void(model::SearchResponse)> on_done_callback,
       pavlov::PavlovSearchResponse response);
-  void FetchPlayersData(std::vector<std::string> user_ids);
   void OnFetchPlayersDataDone(backend::Result result,
                               backend::eos::FetchUsersInfoResponse response);
   void TryResolvePendingServerLobbyDetailsRequest(bool force);
+  void OnSearchUsersDone(
+      base::OnceCallback<void(model::SearchUsersResponse)> on_done_callback,
+      backend::Result result,
+      backend::eos::SearchUsersResponse response);
+  void OnSearchUsersWithDetailsDone(
+      base::OnceCallback<void(model::SearchUsersResponse)> on_done_callback,
+      backend::eos::SearchUsersResponse response);
 
   bool IsPlayerInFavorties(const std::string& player_id) const;
 

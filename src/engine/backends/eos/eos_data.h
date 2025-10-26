@@ -79,4 +79,23 @@ struct FetchUsersInfoResponse {
   std::map<ProductUserId, ProductUser> product_users;
 };
 
+//
+// SearchUsers
+//
+
+struct SearchUsersRequest {
+  std::string query;
+};
+
+struct SearchUsersPlayer {
+  std::string display_name;
+  std::string id;
+  std::string platform;
+  std::string platform_id;
+};
+
+struct SearchUsersResponse {
+  std::vector<SearchUsersPlayer> players;
+};
+
 }  // namespace engine::backend::eos
