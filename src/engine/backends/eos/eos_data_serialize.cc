@@ -58,8 +58,12 @@ void from_json(const nlohmann::json& in, SearchLobbiesSession& obj) {
   obj.public_players = in.value("publicPlayers", std::vector<std::string>{});
   obj.started = in.value("started", false);
   obj.attributes = in.value("attributes", std::map<std::string, std::string>{});
-  obj.owner = in.value("owner", "");
-  obj.owner_platform_id = in.value("ownerPlatformId", -1);
+  if (in.contains("owner") && in["owner"].is_string()) {
+    obj.owner = in.value("owner", "");
+  }
+  if (in.contains("ownerPlatformId") && in["ownerPlatformId"].is_string()) {
+    obj.owner_platform_id = in.value("ownerPlatformId", -1);
+  }
 }
 
 void from_json(const nlohmann::json& in, SearchLobbiesResponse& obj) {
