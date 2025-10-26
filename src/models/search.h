@@ -44,6 +44,7 @@ struct SearchDetailsRequest {
 struct SearchDetailsResponse {
   struct Member {
     std::string id;
+    std::string platform_id;
     std::string name;
     std::string avatar_url;
     std::string icon_url;

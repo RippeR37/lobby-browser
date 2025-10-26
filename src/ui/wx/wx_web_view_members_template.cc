@@ -39,13 +39,14 @@ std::string WxWebViewMembersMemberRow(
       <td style='padding-left:10px;'>
         <img width='14' height='14' src='$USERICON' onclick='window.wxWebView.postMessage("defaultBrowserNavigate;$USERPROFILE")'>
         <span style='font-size:18px;font-weight:bold;'>$USERNAME</span><br>
-        <span style='font-size:10px;font-family:monospace;'>$USERID</span>
+        <span style='font-size:10px;font-family:monospace;' onclick='window.wxWebView.postMessage("uiNavigate;player;$USERID")'>$USERPLATFORMID</span>
       </td>
     </tr>
 )";
 
   util::ReplaceAll(result, "$USERNAME", member.name);
   util::ReplaceAll(result, "$USERID", member.id);
+  util::ReplaceAll(result, "$USERPLATFORMID", member.platform_id);
   util::ReplaceAll(result, "$USERAVATAR", member.avatar_url);
   util::ReplaceAll(result, "$USERICON", member.icon_url);
   util::ReplaceAll(result, "$USERPROFILE", member.profile_url);

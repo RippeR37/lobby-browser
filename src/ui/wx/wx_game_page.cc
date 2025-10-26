@@ -473,6 +473,16 @@ wxPanel* WxGamePage::CreateMainGamePageDetailsDetailsPanel(wxWindow* parent) {
               LOG(INFO) << "Navigate to: " << navigateUrl;
               wxLaunchDefaultBrowser(navigateUrl);
             }
+          } else if (evt.GetString().starts_with("uiNavigate;")) {
+            // navigate somewhere in UI
+            if (evt.GetString().starts_with("uiNavigate;player;")) {
+              // jump to player's view
+              const auto player_id =
+                  evt.GetString().substr(sizeof("uiNavigate;player;") - 1);
+              if (player_id.size() > 0) {
+                NavigateToPlayer(player_id.ToStdString());
+              }
+            }
           }
         }
       });
@@ -645,6 +655,27 @@ void WxGamePage::OnPlayersRowContextMenuSelected(wxDataViewItem selected_lobby,
       event_handler_->RemovePlayerFromFavorites(
           game_model_.name, player_id.GetString().ToStdString());
       break;
+    }
+  }
+}
+
+void WxGamePage::NavigateToPlayer(std::string player_id) {
+  if (!game_model_.features.list_players) {
+    return;
+  }
+
+  for (int row = 0; row < players_list_->GetItemCount(); ++row) {
+    wxVariant row_variant;
+    players_list_->GetValue(row_variant, row, 1);
+
+    if (row_variant.GetString().IsSameAs(player_id)) {
+      if (main_panel_notebook_->GetSelection() != 1) {
+        main_panel_notebook_->SetSelection(1);
+      }
+      wxDataViewItem item = players_list_->RowToItem(row);
+      players_list_->EnsureVisible(item);
+      players_list_->Select(item);
+      return;
     }
   }
 }

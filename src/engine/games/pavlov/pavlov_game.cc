@@ -821,6 +821,7 @@ void PavlovGame::TryResolvePendingServerLobbyDetailsRequest(bool force) {
         }
       }();
       response.members.emplace_back(model::SearchDetailsResponse::Member{
+          member_id,
           player_data->platform_id.empty() ? member_id
                                            : player_data->platform_id,
           player_data->name,
@@ -835,6 +836,7 @@ void PavlovGame::TryResolvePendingServerLobbyDetailsRequest(bool force) {
     } else {
       response.all_members_known = false;
       response.members.emplace_back(model::SearchDetailsResponse::Member{
+          member_id,
           member_id,
           "???",
           "http://prod.cdn.pavlov-vr.com/avatar/" + member_id + ".png",

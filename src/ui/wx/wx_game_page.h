@@ -60,6 +60,7 @@ class WxGamePage {
   void OnRowContextMenuSelected(wxDataViewItem selected_lobby, int event_id);
   void OnPlayersRowContextMenuSelected(wxDataViewItem selected_lobby,
                                        int event_id);
+  void NavigateToPlayer(std::string player_id);
   void ShowLobbyDetails(wxString lobby_id);
   void OnPlayersRowEntered(wxDataViewEvent& event);
   void OnSearchLobbiesAndServersDone(model::SearchResponse response);
