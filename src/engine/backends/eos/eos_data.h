@@ -82,25 +82,6 @@ struct FetchUsersInfoResponse {
 };
 
 //
-// SearchUsers
-//
-
-struct SearchUsersRequest {
-  std::string query;
-};
-
-struct SearchUsersPlayer {
-  std::string display_name;
-  std::string id;
-  std::string platform;
-  std::string platform_id;
-};
-
-struct SearchUsersResponse {
-  std::vector<SearchUsersPlayer> players;
-};
-
-//
 // LobbyConnector
 //
 

@@ -16,11 +16,15 @@ class WxLobbyConnectDialog : public wxDialog {
   WxLobbyConnectDialog(
       wxWindow* parent,
       std::string lobby_id,
+      std::string game_mode,
       std::string owner,
-      model::LobbyConnectorCreateCallback create_lobby_connector);
+      model::LobbyConnectorCreateCallback create_lobby_connector,
+      bool as_modal);
   ~WxLobbyConnectDialog() override;
 
  private:
+  void PositionRandomlyRelativeToParent();
+
   void UpdateText(std::string new_text);
   void UpdateGauge(int new_value);
   void OnDone(bool success);
@@ -30,6 +34,9 @@ class WxLobbyConnectDialog : public wxDialog {
   bool HasSucceeded() const;
   bool HasFailed() const;
 
+  void AutoCloseOnDoneTimeout();
+
+  bool as_modal_;
   wxGauge* gauge_;
   wxStaticText* status_text_;
   wxButton* button_;

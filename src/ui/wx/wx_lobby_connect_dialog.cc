@@ -1,26 +1,48 @@
 #include "ui/wx/wx_lobby_connect_dialog.h"
 
+#include <random>
+
+#include "base/threading/sequenced_task_runner_handle.h"
 #include "wx/statline.h"
 
 namespace ui::wx {
 
+namespace {
+const auto kModalStyle = wxDEFAULT_DIALOG_STYLE;
+const auto kModelessStyle = wxDEFAULT_DIALOG_STYLE | wxSTAY_ON_TOP;
+
+const auto kConnectedTimeout = base::Minutes(5);
+}  // namespace
+
 WxLobbyConnectDialog::WxLobbyConnectDialog(
     wxWindow* parent,
     std::string lobby_id,
+    std::string game_mode,
     std::string owner,
-    model::LobbyConnectorCreateCallback create_lobby_connector)
+    model::LobbyConnectorCreateCallback create_lobby_connector,
+    bool as_modal)
     : wxDialog(parent,
                wxID_ANY,
-               "Connecting to lobby (" + owner + ")",
+               "Connecting to lobby",
                wxDefaultPosition,
-               wxSize(500, 300)),
+               wxSize(500, 300),
+               as_modal ? kModalStyle : kModelessStyle),
+      as_modal_(as_modal),
       weak_factory_(this) {
   weak_this_ = weak_factory_.GetWeakPtr();
 
   wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
 
   // Grid sizer for two-column status info
-  auto* gridSizer = new wxGridSizer(1, 2, 5, 10);
+  auto* gridSizer = new wxGridSizer(3, 2, 5, 10);
+
+  gridSizer->Add(new wxStaticText(this, wxID_ANY, "GameMode:"), 0,
+                 wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL);
+  gridSizer->Add(new wxStaticText(this, wxID_ANY, game_mode), 0, wxALIGN_LEFT);
+
+  gridSizer->Add(new wxStaticText(this, wxID_ANY, "Owner:"), 0,
+                 wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL);
+  gridSizer->Add(new wxStaticText(this, wxID_ANY, owner), 0, wxALIGN_LEFT);
 
   gridSizer->Add(new wxStaticText(this, wxID_ANY, "Status:"), 0,
                  wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL);
@@ -40,6 +62,10 @@ WxLobbyConnectDialog::WxLobbyConnectDialog(
   SetSizerAndFit(mainSizer);
   Center();
 
+  if (!as_modal) {
+    PositionRandomlyRelativeToParent();
+  }
+
   button_->Bind(wxEVT_BUTTON, &WxLobbyConnectDialog::OnActionButtonClick, this);
 
   lobby_connector_ = create_lobby_connector.Run(
@@ -50,6 +76,21 @@ WxLobbyConnectDialog::WxLobbyConnectDialog(
 }
 
 WxLobbyConnectDialog::~WxLobbyConnectDialog() = default;
+
+void WxLobbyConnectDialog::PositionRandomlyRelativeToParent() {
+  auto center_position = GetPosition();
+
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<> dist(-150, 150);
+
+  int offsetX = dist(gen);
+  int offsetY = dist(gen);
+
+  // Set new position
+  wxPoint dialogPos = center_position + wxPoint(offsetX, offsetY);
+  SetPosition(dialogPos);
+}
 
 void WxLobbyConnectDialog::UpdateText(std::string new_text) {
   status_text_->SetLabel(new_text);
@@ -68,6 +109,12 @@ void WxLobbyConnectDialog::OnDone(bool success) {
     UpdateGauge(100);
     SetTitle("Connected to lobby");
     button_->SetLabel("Disconnect");
+
+    base::SequencedTaskRunnerHandle::Get()->PostDelayedTask(
+        FROM_HERE,
+        base::BindOnce(&WxLobbyConnectDialog::AutoCloseOnDoneTimeout,
+                       weak_this_),
+        kConnectedTimeout);
   } else {
     UpdateText("Failed");
     UpdateGauge(0);
@@ -84,7 +131,11 @@ void WxLobbyConnectDialog::OnActionButtonClick(wxCommandEvent&) {
   UpdateText("Cancelled");
   UpdateGauge(0);
   SetTitle("Connection cancelled");
-  EndModal(wxID_CANCEL);
+  if (as_modal_) {
+    EndModal(wxID_CANCEL);
+  } else {
+    Destroy();
+  }
 }
 
 bool WxLobbyConnectDialog::HasCompleted() const {
@@ -97,6 +148,16 @@ bool WxLobbyConnectDialog::HasSucceeded() const {
 
 bool WxLobbyConnectDialog::HasFailed() const {
   return HasCompleted() && !(*result_);
+}
+
+void WxLobbyConnectDialog::AutoCloseOnDoneTimeout() {
+  if (as_modal_) {
+    EndModal(wxID_OK);
+  } else {
+    Destroy();
+  }
+
+  wxBell();
 }
 
 }  // namespace ui::wx

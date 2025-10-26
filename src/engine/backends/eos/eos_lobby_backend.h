@@ -33,13 +33,10 @@ class EosLobbyBackend : public LobbyBackend {
       eos::FetchUsersInfoRequest request,
       base::OnceCallback<void(Result, eos::FetchUsersInfoResponse)>
           on_done_callback);
-  void SearchUsers(eos::SearchUsersRequest request,
-                   base::OnceCallback<void(Result, eos::SearchUsersResponse)>
-                       on_done_callback);
 
   model::LobbyConnectorCreateCallback GetLobbyConnectorCreateCallback();
 
- private:
+ protected:
   void StartAuthenticateViaSteam();
   void AuthenticateWithSteam(model::AuthResult auth_result);
   void OnEosAuthResponse(base::net::ResourceResponse response);
@@ -55,10 +52,6 @@ class EosLobbyBackend : public LobbyBackend {
       base::OnceCallback<void(Result, eos::FetchUsersInfoResponse)>
           on_done_callback,
       std::optional<Result> error_result);
-  void DoSearchUsers(std::string json_request,
-                     base::OnceCallback<void(Result, eos::SearchUsersResponse)>
-                         on_done_callback,
-                     std::optional<Result> error_result);
   void OnSearchLobbiesResponse(
       base::OnceCallback<void(Result, eos::SearchLobbiesResponse)>
           on_done_callback,
@@ -67,10 +60,6 @@ class EosLobbyBackend : public LobbyBackend {
       base::OnceCallback<void(Result, eos::FetchUsersInfoResponse)>
           on_done_callback,
       std::vector<base::net::ResourceResponse> responses);
-  void OnSearchUsersResponse(
-      base::OnceCallback<void(Result, eos::SearchUsersResponse)>
-          on_done_callback,
-      base::net::ResourceResponse response);
 
   std::string auth_init_token_;
   std::string deployment_id_;

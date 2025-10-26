@@ -443,7 +443,7 @@ wxPanel* WxGamePage::CreateMainGamePageDetailsDetailsPanel(wxWindow* parent) {
           }
       });
     )";
-    details_panel->RunScript(script);
+    details_panel->RunScriptAsync(script);
   });
 
   panel_sizer->Add(details_panel_, 1, wxEXPAND | wxALL, 5);
@@ -770,11 +770,21 @@ void WxGamePage::BringConnectToLobbyDialog(wxDataViewItem selected_lobby) {
 
   results_list_->GetValue(value, row, 0);
   auto lobby_id = value.GetString().ToStdString();
+  results_list_->GetValue(value, row, 1);
+  auto game_mode = value.GetString().ToStdString();
   results_list_->GetValue(value, row, 2);
   auto owner = value.GetString().ToStdString();
 
-  WxLobbyConnectDialog{parent_, lobby_id, owner, create_lobby_connector_}
-      .ShowModal();
+  const bool show_as_modal = false;
+  if (show_as_modal) {
+    WxLobbyConnectDialog{
+        parent_, lobby_id, game_mode, owner, create_lobby_connector_, true}
+        .ShowModal();
+  } else {
+    auto* dialog = new WxLobbyConnectDialog(parent_, lobby_id, game_mode, owner,
+                                            create_lobby_connector_, false);
+    dialog->Show();
+  }
 }
 
 }  // namespace ui::wx

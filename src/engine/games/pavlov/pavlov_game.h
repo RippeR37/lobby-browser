@@ -8,13 +8,14 @@
 #include "nlohmann/json.hpp"
 
 #include "engine/backends/eos/eos_data.h"
+#include "engine/backends/pavlov/pavlov_data.h"
 #include "engine/backends/result.h"
 #include "engine/games/base_game.h"
 #include "engine/games/pavlov/pavlov_data.h"
 #include "engine/games/pavlov/pavlov_players_data_store.h"
 
 namespace engine::backend {
-class EosLobbyBackend;
+class PavlovLobbyBackend;
 }  // namespace engine::backend
 
 namespace engine::game {
@@ -83,10 +84,10 @@ class PavlovGame : public BaseGame {
   void OnSearchUsersDone(
       base::OnceCallback<void(model::SearchUsersResponse)> on_done_callback,
       backend::Result result,
-      backend::eos::SearchUsersResponse response);
+      backend::pavlov::SearchUsersResponse response);
   void OnSearchUsersWithDetailsDone(
       base::OnceCallback<void(model::SearchUsersResponse)> on_done_callback,
-      backend::eos::SearchUsersResponse response);
+      backend::pavlov::SearchUsersResponse response);
   void OnSearchLobbyPlayersDone(
       base::OnceCallback<void(model::GamePlayersResults)> on_done_callback,
       backend::eos::SearchLobbiesResponse response);
@@ -96,7 +97,7 @@ class PavlovGame : public BaseGame {
   std::string todo_auth_token_;
 
   pavlov::PavlovConfig config_;
-  std::unique_ptr<backend::EosLobbyBackend> lobby_backend_;
+  std::unique_ptr<backend::PavlovLobbyBackend> lobby_backend_;
   pavlov::PavlovPlayersDataStore players_data_store_;
   std::optional<std::vector<pavlov::PavlovLobbyServer>> last_search_results_;
   std::optional<

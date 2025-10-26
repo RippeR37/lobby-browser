@@ -39,6 +39,7 @@ std::string GenerateRandomID(size_t length = 22) {
 }  // namespace
 
 EosLobbyConnector::EosLobbyConnector(
+    std::string deployment_id,
     AuthToken<std::string> access_token,
     std::string lobby_id,
     base::RepeatingCallback<void(std::string)> status_update_cb,
@@ -46,9 +47,9 @@ EosLobbyConnector::EosLobbyConnector(
     base::OnceCallback<void(bool)> on_done_callback) {
   worker_thread_.Start();
   client_ = std::make_unique<EosLobbyConnector::ClientImpl>(
-      worker_thread_.TaskRunner(), std::move(access_token), std::move(lobby_id),
-      std::move(status_update_cb), std::move(progress_update_cb),
-      std::move(on_done_callback));
+      worker_thread_.TaskRunner(), std::move(deployment_id),
+      std::move(access_token), std::move(lobby_id), std::move(status_update_cb),
+      std::move(progress_update_cb), std::move(on_done_callback));
 }
 
 EosLobbyConnector::~EosLobbyConnector() {
@@ -65,6 +66,7 @@ class EosLobbyConnector::ClientImpl {
   // Created on _any_ thread, will be destroyed on `task_runner` and run all
   // member functions on it as well.
   ClientImpl(std::shared_ptr<base::SequencedTaskRunner> task_runner,
+             std::string deployment_id,
              AuthToken<std::string> access_token,
              std::string lobby_id,
              base::RepeatingCallback<void(std::string)> status_update_cb,
@@ -73,7 +75,7 @@ class EosLobbyConnector::ClientImpl {
   ~ClientImpl();
 
  private:
-  void InitializeOnTaskRunner();
+  void InitializeOnTaskRunner(std::string deployment_id);
   void TryJoinOnTaskRunner();
   void ReportProgressOnTaskRunner(bool waiting);
   void ReportDoneOnTaskRunner(bool success);
@@ -99,6 +101,7 @@ class EosLobbyConnector::ClientImpl {
 
 EosLobbyConnector::ClientImpl::ClientImpl(
     std::shared_ptr<base::SequencedTaskRunner> task_runner,
+    std::string deployment_id,
     AuthToken<std::string> access_token,
     std::string lobby_id,
     base::RepeatingCallback<void(std::string)> status_update_cb,
@@ -122,8 +125,8 @@ EosLobbyConnector::ClientImpl::ClientImpl(
   progress_update_cb_.Run(0);
 
   task_runner_->PostTask(
-      FROM_HERE,
-      base::BindOnce(&ClientImpl::InitializeOnTaskRunner, weak_this_));
+      FROM_HERE, base::BindOnce(&ClientImpl::InitializeOnTaskRunner, weak_this_,
+                                deployment_id));
 }
 
 EosLobbyConnector::ClientImpl::~ClientImpl() {
@@ -133,11 +136,12 @@ EosLobbyConnector::ClientImpl::~ClientImpl() {
   }
 }
 
-void EosLobbyConnector::ClientImpl::InitializeOnTaskRunner() {
+void EosLobbyConnector::ClientImpl::InitializeOnTaskRunner(
+    std::string deployment_id) {
   DCHECK(task_runner_->RunsTasksInCurrentSequence());
 
   ws_ = std::make_unique<ix::WebSocket>();
-  ws_->setUrl(GetLobbiesConnectUrl("e708e7885689412aa634bef12ec60023"));
+  ws_->setUrl(GetLobbiesConnectUrl(deployment_id));
   ws_->setExtraHeaders({
       {"Authorization", "Bearer " + access_token_.GetToken().value_or("")},
   });
@@ -195,6 +199,10 @@ void EosLobbyConnector::ClientImpl::TryJoinOnTaskRunner() {
 
 void EosLobbyConnector::ClientImpl::ReportProgressOnTaskRunner(bool waiting) {
   DCHECK(task_runner_->RunsTasksInCurrentSequence());
+
+  if (!on_done_callback_) {
+    return;
+  }
 
   const std::string details = waiting ? "\nWaiting" : "";
 

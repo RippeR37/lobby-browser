@@ -18,7 +18,8 @@ namespace engine::backend {
 // created.
 class EosLobbyConnector : public model::LobbyConnector {
  public:
-  EosLobbyConnector(AuthToken<std::string> access_token,
+  EosLobbyConnector(std::string deployment_id,
+                    AuthToken<std::string> access_token,
                     std::string lobby_id,
                     base::RepeatingCallback<void(std::string)> status_update_cb,
                     base::RepeatingCallback<void(int)> progress_update_cb,

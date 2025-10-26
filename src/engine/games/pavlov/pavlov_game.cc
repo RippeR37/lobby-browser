@@ -12,28 +12,15 @@
 #include "base/net/simple_url_loader.h"
 
 #include "engine/backends/eos/eos_data.h"
-#include "engine/backends/eos/eos_lobby_backend.h"
-#include "engine/backends/steam/steam_subprocess_auth_backend.h"
+#include "engine/backends/pavlov/pavlov_lobby_backend.h"
 #include "utils/strings.h"
 
 namespace engine::game {
 
 namespace {
 // Options
-
 // Enable computing server pings (requires per-server network requests)
 const bool kEnableComputingServerPings = true;
-
-// Steam auth
-const int kPavlovSteamAppId = 555160;
-
-// EOS Auth
-const std::string kPavlovEosAuthInitToken =
-    "Basic "
-    "eHl6YTc4OTFSbmRPSUhwTWlacmtQNXFkRE5ZRHJQZ3Y6ZlE2djdDVFVEdFYxVVo4bjdFOWpYQn"
-    "hMMEZHSXhXbEVlZkNYV2VYR2czZw==";
-const std::string kPavlovEosDeploymentId = "e708e7885689412aa634bef12ec60023";
-const std::string kPavlovEosNonce = "yA5lpRhWbECU8XQ8Xrb44w";
 
 const auto kPavlovEosEmptyCriteria = backend::eos::SearchLobbiesCriteria{
     "attributes.VERSION_s",
@@ -179,12 +166,8 @@ PavlovGame::PavlovGame(SetStatusTextCallback set_status_text,
     }
   }
 
-  lobby_backend_ = std::make_unique<backend::EosLobbyBackend>(
-      kPavlovEosAuthInitToken, kPavlovEosDeploymentId, kPavlovEosNonce,
-      std::make_unique<backend::SteamSubprocessAuthBackend>(
-          kPavlovSteamAppId,
-          backend::SteamAuthBackend::AuthType::kEncryptedAppTicket,
-          steam_auth_backend_command));
+  lobby_backend_ = std::make_unique<backend::PavlovLobbyBackend>(
+      std::move(steam_auth_backend_command));
 }
 
 PavlovGame::~PavlovGame() = default;
@@ -439,7 +422,7 @@ void PavlovGame::SearchUsers(
   SetStatusText("Searching users...");
 
   lobby_backend_->SearchUsers(
-      backend::eos::SearchUsersRequest{request.user_name},
+      backend::pavlov::SearchUsersRequest{request.user_name},
       base::BindOnce(&PavlovGame::OnSearchUsersDone, weak_this_,
                      std::move(on_done_callback)));
 }
@@ -847,7 +830,7 @@ void PavlovGame::TryResolvePendingServerLobbyDetailsRequest(bool force) {
 void PavlovGame::OnSearchUsersDone(
     base::OnceCallback<void(model::SearchUsersResponse)> on_done_callback,
     backend::Result result,
-    backend::eos::SearchUsersResponse response) {
+    backend::pavlov::SearchUsersResponse response) {
   SetStatusText("Received users data (" +
                 std::to_string(response.players.size()) + ")");
 
@@ -882,7 +865,7 @@ void PavlovGame::OnSearchUsersDone(
 
 void PavlovGame::OnSearchUsersWithDetailsDone(
     base::OnceCallback<void(model::SearchUsersResponse)> on_done_callback,
-    backend::eos::SearchUsersResponse response) {
+    backend::pavlov::SearchUsersResponse response) {
   std::vector<model::SearchUserEntry> results;
   for (auto& player : response.players) {
     auto last_seen = std::string{};

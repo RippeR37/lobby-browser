@@ -121,6 +121,10 @@ target_sources(lobby_browser
     src/engine/backends/nakama/nakama_data_serialize.h
     src/engine/backends/nakama/nakama_lobby_backend.cc
     src/engine/backends/nakama/nakama_lobby_backend.h
+    src/engine/backends/pavlov/pavlov_data.cc
+    src/engine/backends/pavlov/pavlov_data.h
+    src/engine/backends/pavlov/pavlov_lobby_backend.cc
+    src/engine/backends/pavlov/pavlov_lobby_backend.h
     src/engine/backends/steam/steam_auth_backend.cc
     src/engine/backends/steam/steam_auth_backend.h
     src/engine/backends/steam/steam_in_process_auth_backend.cc
