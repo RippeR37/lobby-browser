@@ -41,6 +41,7 @@ struct SearchLobbiesSession {
   std::string bucket;
   int64_t total_players;
   int64_t open_public_players;
+  std::vector<std::string> public_players;
   SearchLobbiesSessionSettings settings;
   bool started;
   std::map<std::string, std::string> attributes;
@@ -51,6 +52,31 @@ struct SearchLobbiesSession {
 struct SearchLobbiesResponse {
   std::vector<SearchLobbiesSession> sessions;
   int64_t count;
+};
+
+//
+// FetchUsersInfo
+//
+
+using ProductUserId = std::string;
+
+struct FetchUsersInfoRequest {
+  std::vector<ProductUserId> product_user_ids;
+};
+
+struct ProductUserAccount {
+  std::string account_id;
+  std::string display_name;
+  std::string identity_provider_id;
+  std::string last_login;
+};
+
+struct ProductUser {
+  std::vector<ProductUserAccount> accounts;
+};
+
+struct FetchUsersInfoResponse {
+  std::map<ProductUserId, ProductUser> product_users;
 };
 
 }  // namespace engine::backend::eos

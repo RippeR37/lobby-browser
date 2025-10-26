@@ -32,6 +32,16 @@ struct SearchDetailsRequest {
   bool wait_for_full_details;
 };
 
-struct SearchDetailsResponse {};
+struct SearchDetailsResponse {
+  struct Member {
+    std::string id;
+    std::string name;
+    std::string avatar_url;
+    std::string icon_url;
+  };
+
+  bool all_members_known;
+  std::vector<Member> members;
+};
 
 }  // namespace model

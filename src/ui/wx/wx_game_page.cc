@@ -10,6 +10,7 @@
 #include "wx/textctrl.h"
 
 #include "ui/wx/wx_results_list_model.h"
+#include "ui/wx/wx_web_view_members_template.h"
 #include "utils/strings.h"
 
 namespace ui::wx {
@@ -64,6 +65,7 @@ WxGamePage::WxGamePage(
       results_list_(nullptr),
       game_details_notebook_(nullptr),
       filters_panel_(nullptr),
+      details_panel_(nullptr),
       search_button_(nullptr),
       switch_to_details_tab_(false),
       weak_factory_(this) {
@@ -319,8 +321,23 @@ wxPanel* WxGamePage::CreateMainGamePageDetailsDetailsPanel(wxWindow* parent) {
   auto* panel_sizer = new wxBoxSizer(wxVERTICAL);
   panel->SetSizer(panel_sizer);
 
-  // TODO: implement
+  details_panel_ = wxWebView::New(panel, wxID_ANY, wxWebViewDefaultURLStr,
+                                  wxDefaultPosition, {});
+  details_panel_->EnableContextMenu(false);
+  details_panel_->EnableAccessToDevTools(false);
 
+  // Install message handler with the name wx_msg
+  details_panel_->AddScriptMessageHandler("wxWebView");
+  details_panel_->Bind(wxEVT_WEBVIEW_SCRIPT_MESSAGE_RECEIVED,
+                       [=](wxWebViewEvent& evt) {
+                         if (evt.GetMessageHandler() == "wxWebView") {
+                           if (evt.GetString() == "keydown_F5") {
+                             TriggerSearchIfPossible();
+                           }
+                         }
+                       });
+
+  panel_sizer->Add(details_panel_, 1, wxEXPAND | wxALL, 5);
   return panel;
 }
 
@@ -391,8 +408,29 @@ void WxGamePage::OnServerLobbyDetailsReceived(
     switch_to_details_tab_ = false;
   }
 
-  // TODO: implement
-  (void)details;
+  auto html_content = WxWebViewMembersHeader();
+  for (const auto& member : details.members) {
+    html_content += WxWebViewMembersMemberRow(member);
+  }
+  html_content += WxWebViewMembersFooter();
+  details_panel_->SetPage(html_content, "");
+
+  // Scripts handling
+  wxString script = R"(
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'F5') {
+            window.wxWebView.postMessage('keydown_F5');
+            e.preventDefault(); // prevent default page reload
+        }
+    });
+  )";
+  details_panel_->RunScript(script);
+
+  if (!details.all_members_known) {
+    // Engine didn't have all the members known at the time, so let's query
+    // again but this time ask it to wait until they became known.
+    RequestSelectedLobbyDetails(true);
+  }
 }
 
 void WxGamePage::RefreshResultsList() {

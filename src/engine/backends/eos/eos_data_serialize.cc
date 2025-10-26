@@ -55,6 +55,7 @@ void from_json(const nlohmann::json& in, SearchLobbiesSession& obj) {
   obj.settings = in.value("settings", SearchLobbiesSessionSettings{});
   obj.total_players = in.value("totalPlayers", -1);
   obj.open_public_players = in.value("openPublicPlayers", -1);
+  obj.public_players = in.value("publicPlayers", std::vector<std::string>{});
   obj.started = in.value("started", false);
   obj.attributes = in.value("attributes", std::map<std::string, std::string>{});
   obj.owner = in.value("owner", "");
@@ -64,6 +65,28 @@ void from_json(const nlohmann::json& in, SearchLobbiesSession& obj) {
 void from_json(const nlohmann::json& in, SearchLobbiesResponse& obj) {
   obj.sessions = in.value("sessions", std::vector<SearchLobbiesSession>{});
   obj.count = in.value("count", -1);
+}
+
+void to_json(nlohmann::json& out, const FetchUsersInfoRequest& obj) {
+  out = nlohmann::json{
+      {"productUserIds", obj.product_user_ids},
+  };
+}
+
+void from_json(const nlohmann::json& in, ProductUserAccount& obj) {
+  obj.account_id = in.value("accountId", "");
+  obj.display_name = in.value("displayName", "");
+  obj.identity_provider_id = in.value("identityProviderId", "");
+  obj.last_login = in.value("lastLogin", "");
+}
+
+void from_json(const nlohmann::json& in, ProductUser& obj) {
+  obj.accounts = in.value("accounts", std::vector<ProductUserAccount>{});
+}
+
+void from_json(const nlohmann::json& in, FetchUsersInfoResponse& obj) {
+  obj.product_users =
+      in.value("productUsers", std::map<ProductUserId, ProductUser>{});
 }
 
 }  // namespace engine::backend::eos

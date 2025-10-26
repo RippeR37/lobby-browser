@@ -14,6 +14,9 @@ namespace {
 const auto* kAuthUrl = "https://api.epicgames.dev/auth/v1/oauth/token";
 const auto kAuthTimeout = base::Seconds(10);
 const auto kSearchLobbiesTimeout = base::Seconds(15);
+const auto* kFetchUsersInfoUrl =
+    "https://api.epicgames.dev/user/v9/product-users/search";
+const auto kFetchUsersInfoTimeout = base::Seconds(15);
 
 std::string GetLobbyUrl(const std::string& eos_deployment_id) {
   return "https://api.epicgames.dev/lobby/v1/" + eos_deployment_id +
@@ -67,6 +70,48 @@ void EosLobbyBackend::SearchLobbies(
   }
 
   DoSearchLobbies(json_request.dump(), std::move(on_done_callback), {});
+}
+
+void EosLobbyBackend::FetchUsersInfo(
+    eos::FetchUsersInfoRequest request,
+    base::OnceCallback<void(Result, eos::FetchUsersInfoResponse)>
+        on_done_callback) {
+  // EOS backend only supports fetching up to 128 users at once, so let's split
+  // request if need metadata for more.
+  const auto kMaxUsersPerRequest = 128;
+  auto request_chunks_data =
+      util::ToChunks(request.product_user_ids, kMaxUsersPerRequest);
+
+  std::vector<std::string> serialized_requests;
+  for (auto& request_chunk_data : request_chunks_data) {
+    eos::FetchUsersInfoRequest request_chunk{request_chunk_data};
+
+    try {
+      nlohmann::json json_request = request_chunk;
+      serialized_requests.push_back(json_request.dump());
+    } catch (const std::exception& e) {
+      LOG(ERROR) << __FUNCTION__
+                 << "() failed to serialize request: " << e.what();
+      std::move(on_done_callback)
+          .Run(Result{Result::Status::kFailed,
+                      "Failed to serialize request: " + std::string(e.what())},
+               {});
+      return;
+    }
+  }
+
+  if (!auth_token_.IsValid()) {
+    requests_pending_auth_.emplace_back(base::BindOnce(
+        &EosLobbyBackend::DoFetchUsersInfo, weak_this_,
+        std::move(serialized_requests), std::move(on_done_callback)));
+    if (!pending_auth_response_) {
+      StartAuthenticateViaSteam();
+    }
+    return;
+  }
+
+  DoFetchUsersInfo(std::move(serialized_requests), std::move(on_done_callback),
+                   {});
 }
 
 void EosLobbyBackend::StartAuthenticateViaSteam() {
@@ -184,6 +229,39 @@ void EosLobbyBackend::DoSearchLobbies(
                      std::move(on_done_callback)));
 }
 
+void EosLobbyBackend::DoFetchUsersInfo(
+    std::vector<std::string> json_requests,
+    base::OnceCallback<void(Result, eos::FetchUsersInfoResponse)>
+        on_done_callback,
+    std::optional<Result> error_result) {
+  if (!auth_token_.IsValid()) {
+    std::move(on_done_callback)
+        .Run(error_result.value_or(
+                 Result{Result::Status::kAuthFailed, "Failed to authenticate"}),
+             eos::FetchUsersInfoResponse{});
+    return;
+  }
+
+  auto chunk_response_callback =
+      base::BarrierCallback<base::net::ResourceResponse>(
+          json_requests.size(),
+          base::BindOnce(&EosLobbyBackend::OnFetchUsersInfoResponse, weak_this_,
+                         std::move(on_done_callback)));
+
+  for (auto& json_request : json_requests) {
+    const auto kMaxResponseSize = 2 * 1024 * 1024;
+    base::net::SimpleUrlLoader::DownloadLimited(
+        base::net::ResourceRequest{kFetchUsersInfoUrl}
+            .WithHeaders({
+                std::string("Authorization: Bearer ") + *auth_token_.GetToken(),
+                std::string("Content-Type: application/json"),
+            })
+            .WithPostData(std::move(json_request))
+            .WithTimeout(kFetchUsersInfoTimeout),
+        kMaxResponseSize, chunk_response_callback);
+  }
+}
+
 void EosLobbyBackend::OnSearchLobbiesResponse(
     base::OnceCallback<void(Result, eos::SearchLobbiesResponse)>
         on_done_callback,
@@ -212,6 +290,31 @@ void EosLobbyBackend::OnSearchLobbiesResponse(
                         std::string(e.what())},
              eos::SearchLobbiesResponse{});
   }
+}
+
+void EosLobbyBackend::OnFetchUsersInfoResponse(
+    base::OnceCallback<void(Result, eos::FetchUsersInfoResponse)>
+        on_done_callback,
+    std::vector<base::net::ResourceResponse> responses) {
+  eos::FetchUsersInfoResponse combined_response;
+
+  for (auto& response : responses) {
+    if (response.result != base::net::Result::kOk) {
+      continue;
+    }
+
+    try {
+      nlohmann::json json_response = nlohmann::json::parse(response.data);
+      eos::FetchUsersInfoResponse eos_response = json_response;
+      combined_response.product_users.insert(eos_response.product_users.begin(),
+                                             eos_response.product_users.end());
+    } catch (const std::exception& e) {
+      LOG(ERROR) << __FUNCTION__ << "() failed to parse response: " << e.what();
+    }
+  }
+
+  std::move(on_done_callback)
+      .Run(Result{Result::Status::kOk, ""}, std::move(combined_response));
 }
 
 }  // namespace engine::backend

@@ -9,6 +9,7 @@
 #include "wx/dataview.h"
 #include "wx/notebook.h"
 #include "wx/panel.h"
+#include "wx/webview.h"
 
 #include "models/game.h"
 #include "models/search.h"
@@ -66,6 +67,7 @@ class WxGamePage {
   wxDataViewListCtrl* results_list_;
   wxNotebook* game_details_notebook_;
   wxPanel* filters_panel_;
+  wxWebView* details_panel_;
   wxButton* search_button_;
 
   model::GameSearchResults last_response_results_;

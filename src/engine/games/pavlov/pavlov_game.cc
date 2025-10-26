@@ -241,7 +241,7 @@ model::Game PavlovGame::GetModel() const {
                   model::GameResultsColumnOrdering::kString,
               },
           },
-          false,
+          true,
       },
       base::BindRepeating(&FilterModelResultsFunction),
   };
@@ -297,10 +297,31 @@ void PavlovGame::SearchLobbiesAndServers(
 void PavlovGame::GetServerLobbyDetails(
     model::SearchDetailsRequest request,
     base::OnceCallback<void(model::SearchDetailsResponse)> on_done_callback) {
-  (void)request;
+  if (pending_search_details_request_) {
+    TryResolvePendingServerLobbyDetailsRequest(true);
+  }
 
-  // Unsupported
-  std::move(on_done_callback).Run({});
+  std::optional<std::vector<pavlov::PavlovLobbyServer>::iterator> result_it;
+  if (last_search_results_) {
+    result_it =
+        std::find_if(last_search_results_->begin(), last_search_results_->end(),
+                     [&request](const pavlov::PavlovLobbyServer& result) {
+                       return result.id == request.result_id;
+                     });
+    if (result_it == last_search_results_->end()) {
+      result_it.reset();
+    }
+  }
+
+  if (!result_it) {
+    std::move(on_done_callback).Run({});
+    return;
+  }
+
+  pending_search_details_request_ =
+      std::make_pair(std::move(request), std::move(on_done_callback));
+
+  TryResolvePendingServerLobbyDetailsRequest(false);
 }
 
 // static
@@ -431,6 +452,7 @@ void PavlovGame::OnSearchLobbiesDone(
         pin_locked,
         platform(lobby.attributes["PLATFORM_s"]),
         lobby.attributes["STATE_s"],
+        lobby.public_players,
         lobby.attributes["REGION_s"],
 
         // Server-specific data (ip & port)
@@ -482,6 +504,7 @@ void PavlovGame::OnSearchServersDone(
           server.password_protected,
           pavlov::PavlovPlatform::kPCVR,
           "",     // state
+          {},     // member_ids
           "?ms",  // region
           server.ip,
           server.port,
@@ -559,8 +582,11 @@ void PavlovGame::StoreAndConvertSearchResults(
     pavlov::PavlovSearchResponse response) {
   SetStatusText("Received all results.");
 
+  bool update_player_data = false;
+
   if (response.success) {
     last_search_results_ = std::move(response.results);
+    update_player_data = true;
   } else {
     ReportMessage(Presenter::MessageType::kError,
                   "Failed to search Pavlov server/lobbies", response.error);
@@ -611,6 +637,93 @@ void PavlovGame::StoreAndConvertSearchResults(
   }
 
   std::move(on_done_callback).Run(std::move(model_response));
+
+  if (update_player_data) {
+    std::vector<std::string> current_user_ids;
+    for (const auto& result : *last_search_results_) {
+      current_user_ids.insert(current_user_ids.end(), result.member_ids.begin(),
+                              result.member_ids.end());
+    }
+    std::vector<std::string> unknown_user_ids =
+        players_data_store_.OnNewUserIds(std::move(current_user_ids));
+    if (!unknown_user_ids.empty()) {
+      FetchPlayersData(std::move(unknown_user_ids));
+    }
+  }
+}
+
+void PavlovGame::FetchPlayersData(std::vector<std::string> user_ids) {
+  lobby_backend_->FetchUsersInfo(
+      backend::eos::FetchUsersInfoRequest{std::move(user_ids)},
+      base::BindOnce(&PavlovGame::OnFetchPlayersDataDone, weak_this_));
+}
+
+void PavlovGame::OnFetchPlayersDataDone(
+    backend::Result result,
+    backend::eos::FetchUsersInfoResponse response) {
+  players_data_store_.ProcessNewUserData(std::move(response));
+  if (pending_search_details_request_) {
+    TryResolvePendingServerLobbyDetailsRequest(result.status ==
+                                               backend::Result::Status::kOk);
+  }
+}
+
+void PavlovGame::TryResolvePendingServerLobbyDetailsRequest(bool force) {
+  if (!pending_search_details_request_ || !last_search_results_) {
+    return;
+  }
+
+  const auto& request = pending_search_details_request_->first;
+  const auto result_it =
+      std::find_if(last_search_results_->begin(), last_search_results_->end(),
+                   [&request](const pavlov::PavlovLobbyServer& result) {
+                     return result.id == request.result_id;
+                   });
+  if (result_it == last_search_results_->end()) {
+    std::move(pending_search_details_request_->second).Run({});
+    return;
+  }
+
+  const auto& result = *result_it;
+  model::SearchDetailsResponse response{true, {}};
+  for (const auto& member_id : result.member_ids) {
+    auto player_data = players_data_store_.GetCachedDataFor(member_id);
+
+    if (player_data) {
+      const auto* icon_url = [&]() {
+        switch (*player_data->platform) {
+          case pavlov::PavlovUserPlatform::kSteam:
+            return "https://steamcommunity.com/favicon.ico";
+          case pavlov::PavlovUserPlatform::kPlayStation:
+            return "https://gmedia.playstation.com/is/image/SIEPDC/"
+                   "ps-logo-favicon";
+        }
+      }();
+      response.members.emplace_back(model::SearchDetailsResponse::Member{
+          player_data->platform_id.empty() ? member_id
+                                           : player_data->platform_id,
+          player_data->name,
+          "http://prod.cdn.pavlov-vr.com/avatar/" + member_id + ".png",
+          icon_url,
+      });
+    } else if (pending_search_details_request_->first.wait_for_full_details &&
+               !force) {
+      // Don't have all the data which was request and isn't forcing it, so wait
+      return;
+    } else {
+      response.all_members_known = false;
+      response.members.emplace_back(model::SearchDetailsResponse::Member{
+          member_id,
+          "???",
+          "http://prod.cdn.pavlov-vr.com/avatar/" + member_id + ".png",
+          "",
+      });
+    }
+  }
+
+  auto on_done_callback = std::move(pending_search_details_request_->second);
+  pending_search_details_request_.reset();
+  std::move(on_done_callback).Run(std::move(response));
 }
 
 }  // namespace engine::game

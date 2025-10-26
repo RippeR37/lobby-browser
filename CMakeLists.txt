@@ -140,6 +140,8 @@ target_sources(lobby_browser
     src/engine/games/pavlov/pavlov_data.h
     src/engine/games/pavlov/pavlov_game.cc
     src/engine/games/pavlov/pavlov_game.h
+    src/engine/games/pavlov/pavlov_players_data_store.cc
+    src/engine/games/pavlov/pavlov_players_data_store.h
     src/engine/presenter.h
     src/main.cc
     src/models/auth.h
@@ -167,6 +169,8 @@ target_sources(lobby_browser
     src/ui/wx/wx_tray_icon.h
     src/ui/wx/wx_ui_config.cc
     src/ui/wx/wx_ui_config.h
+    src/ui/wx/wx_web_view_members_template.cc
+    src/ui/wx/wx_web_view_members_template.h
     src/utils/arg_parse.cc
     src/utils/arg_parse.h
     src/utils/strings.cc

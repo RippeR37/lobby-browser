@@ -93,6 +93,19 @@ enum class PavlovPlatform {
   kPSVR2,
 };
 
+enum class PavlovUserPlatform {
+  kSteam,
+  kPlayStation,
+};
+
+struct PavlovPlayerData {
+  std::string id;
+  std::string name;
+  std::optional<PavlovUserPlatform> platform;
+  std::string platform_id;
+  std::string last_login;
+};
+
 // Unified struct for both Lobby and Server data
 struct PavlovLobbyServer {
   std::string id;
@@ -106,6 +119,7 @@ struct PavlovLobbyServer {
   bool locked;
   std::optional<PavlovPlatform> platform;
   std::string state;
+  std::vector<std::string> member_ids;
 
   // Lobby specific
   std::string region;

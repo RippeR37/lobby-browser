@@ -139,7 +139,7 @@ void AppEngineImpl::GetServerLobbyDetails(
                               "Failed to search lobby details for '" +
                                   request.game_name + "' - game not found",
                               "");
-    std::move(on_done_callback).Run({});
+    std::move(on_done_callback).Run(model::SearchDetailsResponse{true, {}});
     return;
   }
 

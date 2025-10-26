@@ -28,6 +28,10 @@ class EosLobbyBackend : public LobbyBackend {
       eos::SearchLobbiesRequest request,
       base::OnceCallback<void(Result, eos::SearchLobbiesResponse)>
           on_done_callback);
+  void FetchUsersInfo(
+      eos::FetchUsersInfoRequest request,
+      base::OnceCallback<void(Result, eos::FetchUsersInfoResponse)>
+          on_done_callback);
 
  private:
   void StartAuthenticateViaSteam();
@@ -40,10 +44,19 @@ class EosLobbyBackend : public LobbyBackend {
       base::OnceCallback<void(Result, eos::SearchLobbiesResponse)>
           on_done_callback,
       std::optional<Result> error_result);
+  void DoFetchUsersInfo(
+      std::vector<std::string> json_requests,
+      base::OnceCallback<void(Result, eos::FetchUsersInfoResponse)>
+          on_done_callback,
+      std::optional<Result> error_result);
   void OnSearchLobbiesResponse(
       base::OnceCallback<void(Result, eos::SearchLobbiesResponse)>
           on_done_callback,
       base::net::ResourceResponse response);
+  void OnFetchUsersInfoResponse(
+      base::OnceCallback<void(Result, eos::FetchUsersInfoResponse)>
+          on_done_callback,
+      std::vector<base::net::ResourceResponse> responses);
 
   std::string auth_init_token_;
   std::string deployment_id_;

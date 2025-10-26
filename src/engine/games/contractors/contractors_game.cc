@@ -281,7 +281,7 @@ void ContractorsGame::GetServerLobbyDetails(
   (void)request;
 
   // Unsupported
-  std::move(on_done_callback).Run({});
+  std::move(on_done_callback).Run(model::SearchDetailsResponse{true, {}});
 }
 
 void ContractorsGame::OnModsFetched() {

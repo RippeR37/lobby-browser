@@ -11,6 +11,7 @@
 #include "engine/backends/result.h"
 #include "engine/games/base_game.h"
 #include "engine/games/pavlov/pavlov_data.h"
+#include "engine/games/pavlov/pavlov_players_data_store.h"
 
 namespace engine::backend {
 class EosLobbyBackend;
@@ -69,11 +70,19 @@ class PavlovGame : public BaseGame {
   void StoreAndConvertSearchResults(
       base::OnceCallback<void(model::SearchResponse)> on_done_callback,
       pavlov::PavlovSearchResponse response);
+  void FetchPlayersData(std::vector<std::string> user_ids);
+  void OnFetchPlayersDataDone(backend::Result result,
+                              backend::eos::FetchUsersInfoResponse response);
   void TryResolvePendingServerLobbyDetailsRequest(bool force);
 
   pavlov::PavlovConfig config_;
   std::unique_ptr<backend::EosLobbyBackend> lobby_backend_;
+  pavlov::PavlovPlayersDataStore players_data_store_;
   std::optional<std::vector<pavlov::PavlovLobbyServer>> last_search_results_;
+  std::optional<
+      std::pair<model::SearchDetailsRequest,
+                base::OnceCallback<void(model::SearchDetailsResponse)>>>
+      pending_search_details_request_;
 
   base::WeakPtr<PavlovGame> weak_this_;
   base::WeakPtrFactory<PavlovGame> weak_factory_;
