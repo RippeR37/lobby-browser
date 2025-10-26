@@ -122,12 +122,15 @@ EosLobbyBackend::GetLobbyConnectorCreateCallback() {
          std::string lobby_id,
          base::RepeatingCallback<void(std::string)> status_update_cb,
          base::RepeatingCallback<void(int)> progress_update_cb,
+         base::RepeatingCallback<void(model::LobbyConnector::LobbyStateUpdate)>
+             state_update_cb,
          base::OnceCallback<void(bool)> on_done_callback)
           -> std::unique_ptr<model::LobbyConnector> {
         return std::make_unique<EosLobbyConnector>(
             std::move(deployment_id), std::move(access_token),
             std::move(lobby_id), std::move(status_update_cb),
-            std::move(progress_update_cb), std::move(on_done_callback));
+            std::move(progress_update_cb), std::move(state_update_cb),
+            std::move(on_done_callback));
       },
       deployment_id_, access_token_);
 }

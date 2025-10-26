@@ -24,5 +24,9 @@ void to_json(nlohmann::json& out, const WsJoinRequest& obj);
 
 void from_json(const nlohmann::json& in, WsErrorResponse& obj);
 void from_json(const nlohmann::json& in, WsLobbyInfoResponse& obj);
+void from_json(const nlohmann::json& in, WsLobbyDataChangeMessage& obj);
+void from_json(const nlohmann::json& in, WsMemberJoinedMessage& obj);
+void from_json(const nlohmann::json& in, WsMemberLeftMessage& obj);
+void from_json(const nlohmann::json& in, WsMemberDataChangeMessage& obj);
 
 }  // namespace engine::backend::eos

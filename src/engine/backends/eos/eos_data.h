@@ -98,8 +98,40 @@ struct WsErrorResponse {
   std::string error_message;
 };
 
+struct WsMemberData {
+  std::string id;
+  std::string display_name;
+};
+
 struct WsLobbyInfoResponse {
   std::string request_id;
+  std::string owner_id;
+  std::string game_mode;
+  std::string map;
+  std::vector<WsMemberData> members;
+  int open_public_players;
+  std::string state;
+};
+
+struct WsLobbyDataChangeMessage {
+  std::string game_mode;
+  std::string map;
+  std::string owner_name;
+  std::string state;
+};
+
+struct WsMemberJoinedMessage {
+  std::string player_uid;
+};
+
+struct WsMemberLeftMessage {
+  std::string player_uid;
+  std::string reason;
+};
+
+struct WsMemberDataChangeMessage {
+  std::string player_uid;
+  std::string display_name;
 };
 
 }  // namespace engine::backend::eos

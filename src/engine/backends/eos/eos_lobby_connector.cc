@@ -44,12 +44,14 @@ EosLobbyConnector::EosLobbyConnector(
     std::string lobby_id,
     base::RepeatingCallback<void(std::string)> status_update_cb,
     base::RepeatingCallback<void(int)> progress_update_cb,
+    base::RepeatingCallback<void(LobbyStateUpdate)> state_update_cb,
     base::OnceCallback<void(bool)> on_done_callback) {
   worker_thread_.Start();
   client_ = std::make_unique<EosLobbyConnector::ClientImpl>(
       worker_thread_.TaskRunner(), std::move(deployment_id),
       std::move(access_token), std::move(lobby_id), std::move(status_update_cb),
-      std::move(progress_update_cb), std::move(on_done_callback));
+      std::move(progress_update_cb), std::move(state_update_cb),
+      std::move(on_done_callback));
 }
 
 EosLobbyConnector::~EosLobbyConnector() {
@@ -71,10 +73,20 @@ class EosLobbyConnector::ClientImpl {
              std::string lobby_id,
              base::RepeatingCallback<void(std::string)> status_update_cb,
              base::RepeatingCallback<void(int)> progress_update_cb,
+             base::RepeatingCallback<void(LobbyStateUpdate)> state_update_cb,
              base::OnceCallback<void(bool)> on_done_callback);
   ~ClientImpl();
 
  private:
+  struct LobbyState {
+    std::map<std::string, eos::WsMemberData> members;
+    std::string owner_id;
+    std::string game_mode;
+    std::string map;
+    std::string state;
+    int max_players;
+  };
+
   void InitializeOnTaskRunner(std::string deployment_id);
   void TryJoinOnTaskRunner();
   void ReportProgressOnTaskRunner(bool waiting);
@@ -86,14 +98,20 @@ class EosLobbyConnector::ClientImpl {
   void OnWebSocketCloseOnTaskRunner(int code, std::string reason);
   void OnWebSocketErrorOnTaskRunner(std::string reason);
 
+  void TrackLobbyState(std::string msg_name, nlohmann::json msg);
+  void SendLobbyStateUpdate() const;
+
   std::shared_ptr<base::SequencedTaskRunner> task_runner_;
   AuthToken<std::string> access_token_;
   std::string lobby_id_;
   base::RepeatingCallback<void(std::string)> status_update_cb_;
   base::RepeatingCallback<void(int)> progress_update_cb_;
+  base::RepeatingCallback<void(LobbyStateUpdate)> state_update_cb_;
   base::OnceCallback<void(bool)> on_done_callback_;
   std::unique_ptr<ix::WebSocket> ws_;
   size_t join_counter_ = 0;
+
+  LobbyState lobby_state_;
 
   base::WeakPtr<ClientImpl> weak_this_;
   base::WeakPtrFactory<ClientImpl> weak_factory_;
@@ -106,6 +124,7 @@ EosLobbyConnector::ClientImpl::ClientImpl(
     std::string lobby_id,
     base::RepeatingCallback<void(std::string)> status_update_cb,
     base::RepeatingCallback<void(int)> progress_update_cb,
+    base::RepeatingCallback<void(LobbyStateUpdate)> state_update_cb,
     base::OnceCallback<void(bool)> on_done_callback)
     : task_runner_(std::move(task_runner)),
       access_token_(std::move(access_token)),
@@ -115,6 +134,8 @@ EosLobbyConnector::ClientImpl::ClientImpl(
       progress_update_cb_(
           base::BindToCurrentSequence(std::move(progress_update_cb),
                                       FROM_HERE)),
+      state_update_cb_(
+          base::BindToCurrentSequence(std::move(state_update_cb), FROM_HERE)),
       on_done_callback_(
           base::BindToCurrentSequence(std::move(on_done_callback), FROM_HERE)),
       weak_factory_(this) {
@@ -279,12 +300,13 @@ void EosLobbyConnector::ClientImpl::OnWebSocketMessageOnTaskRunner(
                           ")");
 
     return;
-  } else if (msg_name == "lobbyinfo") {
-    ReportDoneOnTaskRunner(true);
-  } else {
-    // unknown message, ignore
-    return;
   }
+
+  if (msg_name == "lobbyinfo") {
+    ReportDoneOnTaskRunner(true);
+  }
+
+  TrackLobbyState(msg_name, json_msg);
 }
 
 void EosLobbyConnector::ClientImpl::OnWebSocketCloseOnTaskRunner(
@@ -301,6 +323,93 @@ void EosLobbyConnector::ClientImpl::OnWebSocketErrorOnTaskRunner(
   DCHECK(task_runner_->RunsTasksInCurrentSequence());
 
   LOG(ERROR) << __FUNCTION__ << "(reason: " << reason << ")";
+}
+
+void EosLobbyConnector::ClientImpl::TrackLobbyState(std::string msg_name,
+                                                    nlohmann::json json_msg) {
+  try {
+    if (msg_name == "lobbyinfo") {
+      eos::WsLobbyInfoResponse msg = json_msg;
+      lobby_state_.max_players = msg.members.size() + msg.open_public_players;
+      lobby_state_.owner_id = msg.owner_id;
+      lobby_state_.game_mode = msg.game_mode;
+      lobby_state_.map = msg.map;
+      lobby_state_.members.clear();
+      for (const auto& member : msg.members) {
+        lobby_state_.members[member.id] = member;
+      }
+      lobby_state_.state = msg.state;
+
+    } else if (msg_name == "lobbydatachange") {
+      eos::WsLobbyDataChangeMessage msg = json_msg;
+      lobby_state_.game_mode = msg.game_mode;
+      lobby_state_.map = msg.map;
+      lobby_state_.state = msg.state;
+
+      bool updated_owner = false;
+      for (const auto& member : lobby_state_.members) {
+        if (member.second.display_name == msg.owner_name) {
+          lobby_state_.owner_id = member.first;
+          updated_owner = true;
+        }
+      }
+      if (!updated_owner) {
+        lobby_state_.owner_id = msg.owner_name;
+      }
+
+    } else if (msg_name == "memberjoined") {
+      eos::WsMemberJoinedMessage msg = json_msg;
+      if (lobby_state_.members.count(msg.player_uid) == 0) {
+        lobby_state_.members[msg.player_uid] =
+            eos::WsMemberData{msg.player_uid, "<waiting>"};
+      }
+
+    } else if (msg_name == "memberleft") {
+      eos::WsMemberLeftMessage msg = json_msg;
+      lobby_state_.members.erase(msg.player_uid);
+
+    } else if (msg_name == "memberdatachange") {
+      eos::WsMemberDataChangeMessage msg = json_msg;
+      auto member_it = lobby_state_.members.find(msg.player_uid);
+      if (member_it != lobby_state_.members.end()) {
+        if (!msg.display_name.empty()) {
+          member_it->second.display_name = msg.display_name;
+        }
+      }
+
+    } else {
+      // Unknown message
+      return;
+    }
+
+    SendLobbyStateUpdate();
+  } catch (const std::exception& e) {
+    LOG(ERROR) << __FUNCTION__ << "() failed with error: " << e.what();
+  }
+}
+
+void EosLobbyConnector::ClientImpl::SendLobbyStateUpdate() const {
+  if (!state_update_cb_) {
+    return;
+  }
+
+  model::LobbyConnector::LobbyStateUpdate update;
+
+  auto owner_it = lobby_state_.members.find(lobby_state_.owner_id);
+  if (owner_it != lobby_state_.members.end()) {
+    update.owner = owner_it->second.display_name;
+  } else {
+    update.owner = lobby_state_.owner_id.substr(0, 16);
+  }
+
+  update.players = std::to_string(lobby_state_.members.size()) + "/" +
+                   std::to_string(lobby_state_.max_players);
+
+  update.game_mode = lobby_state_.game_mode;
+  update.map = lobby_state_.map;
+  update.state = lobby_state_.state;
+
+  state_update_cb_.Run(std::move(update));
 }
 
 }  // namespace engine::backend

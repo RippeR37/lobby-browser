@@ -118,6 +118,130 @@ void from_json(const nlohmann::json& in, WsErrorResponse& obj) {
 
 void from_json(const nlohmann::json& in, WsLobbyInfoResponse& obj) {
   obj.request_id = in.value("requestId", "");
+
+  if (!in.contains("payload") || !in["payload"].is_object()) {
+    return;
+  }
+
+  const auto& payload = in["payload"];
+
+  if (payload.contains("memberData") && payload["memberData"].is_object()) {
+    const auto& outer_member_data = payload["memberData"];
+
+    if (outer_member_data.contains("memberData") &&
+        outer_member_data["memberData"].is_object()) {
+      const nlohmann::json& inner_member_data = outer_member_data["memberData"];
+
+      // iterate over key-values here
+      for (const auto& [puid, member_data] : inner_member_data.items()) {
+        bool added = false;
+
+        if (member_data.contains("data") && member_data["data"].is_object()) {
+          const auto& data = member_data["data"];
+          if (data.contains("DISPLAYNAME_s") &&
+              data["DISPLAYNAME_s"].is_string()) {
+            obj.members.emplace_back(
+                WsMemberData{puid, data["DISPLAYNAME_s"].get<std::string>()});
+            added = true;
+          }
+        }
+        if (!added) {
+          obj.members.emplace_back(WsMemberData{puid, "<NoPlayerName>"});
+        }
+      }
+    }
+  }
+
+  if (payload.contains("publicData") && payload["publicData"].is_object()) {
+    const auto& public_data = payload["publicData"];
+
+    if (public_data.contains("owner") && public_data["owner"].is_string()) {
+      obj.owner_id = public_data.value("owner", "");
+    }
+    if (public_data.contains("openPublicPlayers") &&
+        public_data["openPublicPlayers"].is_number_integer()) {
+      obj.open_public_players = public_data.value("openPublicPlayers", -1);
+    }
+
+    if (public_data.contains("attributes") &&
+        public_data["attributes"].is_object()) {
+      const auto& attributes = public_data["attributes"];
+
+      if (attributes.contains("GAMELABEL_s") &&
+          attributes["GAMELABEL_s"].is_string()) {
+        obj.game_mode = attributes["GAMELABEL_s"];
+      }
+      if (attributes.contains("MAPLABEL_s") &&
+          attributes["MAPLABEL_s"].is_string()) {
+        obj.map = attributes["MAPLABEL_s"];
+      }
+      if (attributes.contains("STATE_s") && attributes["STATE_s"].is_string()) {
+        obj.state = attributes["STATE_s"];
+      }
+    }
+  }
+}
+
+void from_json(const nlohmann::json& in, WsLobbyDataChangeMessage& obj) {
+  if (!in.contains("payload") || !in["payload"].is_object()) {
+    return;
+  }
+  const auto& payload = in["payload"];
+
+  if (payload.contains("attributes") && payload["attributes"].is_object()) {
+    const auto& attributes = payload["attributes"];
+
+    if (attributes.contains("OWNERNAME_s") &&
+        attributes["OWNERNAME_s"].is_string()) {
+      obj.owner_name = attributes["OWNERNAME_s"];
+    }
+    if (attributes.contains("GAMELABEL_s") &&
+        attributes["GAMELABEL_s"].is_string()) {
+      obj.game_mode = attributes["GAMELABEL_s"];
+    }
+    if (attributes.contains("MAPLABEL_s") &&
+        attributes["MAPLABEL_s"].is_string()) {
+      obj.map = attributes["MAPLABEL_s"];
+    }
+    if (attributes.contains("STATE_s") && attributes["STATE_s"].is_string()) {
+      obj.state = attributes["STATE_s"];
+    }
+  }
+}
+
+void from_json(const nlohmann::json& in, WsMemberJoinedMessage& obj) {
+  if (in.contains("payload") && in["payload"].is_object()) {
+    const auto& payload = in["payload"];
+    obj.player_uid = payload.value("puid", "");
+  }
+}
+
+void from_json(const nlohmann::json& in, WsMemberLeftMessage& obj) {
+  if (in.contains("payload") && in["payload"].is_object()) {
+    const auto& payload = in["payload"];
+    obj.player_uid = payload.value("puid", "");
+    obj.reason = payload.value("reason", "");
+  }
+}
+
+void from_json(const nlohmann::json& in, WsMemberDataChangeMessage& obj) {
+  if (in.contains("payload") && in["payload"].is_object()) {
+    const auto& payload = in["payload"];
+    obj.player_uid = payload.value("puid", "");
+
+    if (payload.contains("memberData") && payload["memberData"].is_object()) {
+      const auto& member_data = payload["memberData"];
+
+      if (member_data.contains("data") && member_data["data"].is_object()) {
+        const auto& data = member_data["data"];
+
+        if (data.contains("DISPLAYNAME_s") &&
+            data["DISPLAYNAME_s"].is_string()) {
+          obj.display_name = data.value("DISPLAYNAME_s", "");
+        }
+      }
+    }
+  }
 }
 
 }  // namespace engine::backend::eos
