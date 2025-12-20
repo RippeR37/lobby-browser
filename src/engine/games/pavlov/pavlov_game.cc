@@ -31,7 +31,7 @@ const auto kPavlovEosEmptyCriteria = backend::eos::SearchLobbiesCriteria{
 std::string MakePavlovServerMasterListUrl(const pavlov::PavlovFilters& request,
                                           const std::string& version) {
   const std::string kUrlPrefix =
-      "https://prod-crossplay-pavlov-ms.vankrupt.net/servers/v2/list/";
+      "https://prod2-crossplay-pavlov-ms.vankrupt.net/servers/v2/list/";
   const std::string kUrlInfix = "/steam/0/0/0/";
 
   std::string game_modes = "ALL";

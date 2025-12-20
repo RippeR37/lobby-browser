@@ -378,7 +378,7 @@ wxDataViewCtrl* WxGamePage::CreateMainGamePageLobbyListCtrl(
           }
         }
         if (auto pin = GetLobbyMetadata(lobby_id.ToStdString(), "pin");
-            pin && !(*pin).empty()) {
+            pin && !(*pin).empty() && (*pin) != "EMPTY") {
           menu.AppendSeparator();
 
           auto* item = menu.Append(ID_Lobby_ContextMenu_PIN, "PIN: " + *pin,

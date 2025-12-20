@@ -82,7 +82,8 @@ PavlovLobbyServer::PavlovLobbyServer(backend::eos::SearchLobbiesSession lobby)
       map(std::move(lobby.attributes["MAP_s"])),
       map_label(std::move(lobby.attributes["MAPLABEL_s"])),
       crossplatform(lobby.attributes["CROSSPLATFORM_s"] == "1"),
-      locked(!lobby.attributes["PINPROTECTED_s"].empty()),
+      locked(!lobby.attributes["PINPROTECTED_s"].empty() &&
+             lobby.attributes["PINPROTECTED_s"] != "EMPTY"),
       pin(lobby.attributes["PINPROTECTED_s"]),
       state(std::move(lobby.attributes["STATE_s"])),
       member_ids(std::move(lobby.public_players)),
