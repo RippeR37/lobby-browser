@@ -13,6 +13,7 @@
 #include "wx/toolbook.h"
 
 #include "ui/wx/wx_auto_search_dialog.h"
+#include "ui/wx/wx_game_config_dialog.h"
 #include "ui/wx/wx_preferences_dialog.h"
 #include "ui/wx/wx_search_players_results_dialog.h"
 #include "ui/wx/wx_theme.h"
@@ -33,6 +34,8 @@ enum MAIN_WINDOW_EVENT_IDS {
   ID_Menu_File_Settings_Preferences = 1001,
 
   ID_Button_Search = 200,
+
+  ID_Menu_Game_Config_Start = 2000,
 };
 }  // namespace
 
@@ -296,8 +299,70 @@ void WxMainWindow::Initialize(const model::AppConfig& app_config,
     }
   }
 
+  UpdateMenus();
+
   if (config_->startup.search_on_startup) {
     RefreshResultsForCurrentGame();
+  }
+}
+
+void WxMainWindow::UpdateMenus() {
+  auto* menu_bar = GetMenuBar();
+  if (!menu_bar)
+    return;
+
+  auto* app_menu = menu_bar->GetMenu(0);
+  if (!app_menu)
+    return;
+
+  // Find "Settings" submenu
+  wxMenuItem* settings_item = nullptr;
+  for (auto* item : app_menu->GetMenuItems()) {
+    if (item->IsSubMenu() && item->GetItemLabelText() == "Settings") {
+      settings_item = item;
+      break;
+    }
+  }
+
+  if (!settings_item) {
+    return;
+  }
+  auto* settings_menu = settings_item->GetSubMenu();
+  if (!settings_menu) {
+    return;
+  }
+
+  // Remove existing per-game config entries
+  auto items = settings_menu->GetMenuItems();
+  for (auto* item : items) {
+    if (item->GetId() >= ID_Menu_Game_Config_Start || item->IsSeparator()) {
+      settings_menu->Delete(item);
+    }
+  }
+
+  // Add per-game config entries
+  bool added_any = false;
+  int id = ID_Menu_Game_Config_Start;
+  for (const auto& [game_name, page] : game_pages_) {
+    auto descriptor = event_handler_->GetGameConfigDescriptor(game_name);
+    if (!descriptor.empty()) {
+      if (!added_any) {
+        settings_menu->AppendSeparator();
+        added_any = true;
+      }
+      settings_menu->Append(id, "Configure " + game_name + "...");
+      Bind(
+          wxEVT_MENU,
+          [this, game_name](wxCommandEvent&) {
+            auto fresh_descriptor =
+                event_handler_->GetGameConfigDescriptor(game_name);
+            WxGameConfigDialog dlg(this, event_handler_, game_name,
+                                   std::move(fresh_descriptor));
+            dlg.ShowModal();
+          },
+          id);
+      id++;
+    }
   }
 }
 

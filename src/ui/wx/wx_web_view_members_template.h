@@ -8,9 +8,14 @@
 
 namespace ui::wx {
 
-std::string WxWebViewMembersHeader(UiEffectiveTheme theme);
+std::string WxWebViewMembersHeader(UiEffectiveTheme theme,
+                                   const std::string& game_name);
+
 std::string WxWebViewMembersMemberRow(
-    const model::SearchDetailsResponse::Member& member);
+    UiEffectiveTheme theme,
+    const model::SearchDetailsResponse::Member& member,
+    const std::string& game_name);
+
 std::string WxWebViewMembersFooter();
 
 }  // namespace ui::wx

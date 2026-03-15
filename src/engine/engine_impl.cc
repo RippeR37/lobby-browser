@@ -4,6 +4,7 @@
 
 #include "engine/games/contractors/contractors_game.h"
 #include "engine/games/pavlov/pavlov_game.h"
+#include "engine/games/quake3/quake3_game.h"
 
 namespace engine {
 
@@ -37,6 +38,7 @@ std::vector<std::string> AppEngineImpl::GetSupportedGames() const {
   return {
       "Pavlov",
       "Contractors",
+      "Quake 3",
   };
 }
 
@@ -208,8 +210,36 @@ const game::Game* AppEngineImpl::LoadGame(const std::string& game,
         steam_auth_backend_command_);
     return games_[game].get();
   }
+  if (game == "Quake 3") {
+    nlohmann::json quake3_config;
+    if (auto cfg_it = config.games.find(game); cfg_it != config.games.end()) {
+      quake3_config = cfg_it->second;
+    }
+
+    games_[game] = std::make_unique<game::Quake3Game>(
+        base::BindRepeating(&SetGameStatusText, presenter_, game),
+        base::BindRepeating(&ReportGameMessage, presenter_), quake3_config);
+    return games_[game].get();
+  }
 
   return nullptr;
+}
+
+void AppEngineImpl::ReinitGames() {
+  auto& config = config_.GetConfig();
+
+  std::vector<model::Game> loaded_game_models;
+  for (const auto& [game_name, game] : games_) {
+    loaded_game_models.push_back(game->GetModel());
+  }
+
+  nlohmann::json ui_config;
+  if (auto cfg_it = config.ui.find(presenter_->GetPresenterName());
+      cfg_it != config.ui.end()) {
+    ui_config = cfg_it->second;
+  }
+
+  presenter_->Initialize(config.app, ui_config, std::move(loaded_game_models));
 }
 
 bool AppEngineImpl::IsPlayerInFavorites(std::string game_name,
@@ -243,6 +273,107 @@ void AppEngineImpl::RemovePlayerFromFavorites(std::string game_name,
 
   auto& game = *game_it->second;
   game.RemovePlayerFromFavorites(std::move(player_id));
+}
+
+model::GameConfigDescriptor AppEngineImpl::GetGameConfigDescriptor(
+    std::string game_name) const {
+  auto game_it = games_.find(game_name);
+  if (game_it == games_.end()) {
+    return {};
+  }
+
+  return game_it->second->GetConfigDescriptor();
+}
+
+void AppEngineImpl::UpdateGameConfigOption(std::string game_name,
+                                           std::string key,
+                                           std::string value) {
+  auto game_it = games_.find(game_name);
+  if (game_it == games_.end()) {
+    return;
+  }
+
+  auto& game = *game_it->second;
+  game.UpdateConfigOption(std::move(key), std::move(value));
+
+  // Update config
+  model::GameFilters empty_filters;
+  auto game_config = game.UpdateConfig(empty_filters);
+  if (!game_config.is_null()) {
+    config_.GetConfig().games[game_name] = game_config;
+  }
+}
+
+void AppEngineImpl::AddGameConfigListItem(std::string game_name,
+                                          std::string key,
+                                          std::vector<std::string> fields) {
+  auto game_it = games_.find(game_name);
+  if (game_it == games_.end()) {
+    return;
+  }
+
+  auto& game = *game_it->second;
+  game.AddConfigListItem(std::move(key), std::move(fields));
+
+  // Update config
+  model::GameFilters empty_filters;
+  auto game_config = game.UpdateConfig(empty_filters);
+  if (!game_config.is_null()) {
+    config_.GetConfig().games[game_name] = game_config;
+  }
+}
+
+void AppEngineImpl::RemoveGameConfigListItem(std::string game_name,
+                                             std::string key,
+                                             std::string item_id) {
+  auto game_it = games_.find(game_name);
+  if (game_it == games_.end()) {
+    return;
+  }
+
+  auto& game = *game_it->second;
+  game.RemoveConfigListItem(std::move(key), std::move(item_id));
+
+  // Update config
+  model::GameFilters empty_filters;
+  auto game_config = game.UpdateConfig(empty_filters);
+  if (!game_config.is_null()) {
+    config_.GetConfig().games[game_name] = game_config;
+  }
+}
+
+void AppEngineImpl::CommitGameConfig(std::string game_name,
+                                     model::GameConfigDescriptor descriptor) {
+  auto game_it = games_.find(game_name);
+  if (game_it == games_.end()) {
+    return;
+  }
+
+  auto& game = *game_it->second;
+  const bool needs_reinitialization = game.CommitConfig(std::move(descriptor));
+
+  // Update config and save
+  model::GameFilters empty_filters;
+  auto game_config = game.UpdateConfig(empty_filters);
+  if (!game_config.is_null()) {
+    config_.GetConfig().games[game_name] = game_config;
+    config_.SaveConfig();
+  }
+
+  if (needs_reinitialization) {
+    ReinitGames();
+  }
+}
+
+void AppEngineImpl::LaunchGame(std::string game_name,
+                               std::string server_address) {
+  auto game_it = games_.find(game_name);
+  if (game_it == games_.end()) {
+    return;
+  }
+
+  auto& game = *game_it->second;
+  game.LaunchGame(std::move(server_address));
 }
 
 }  // namespace engine

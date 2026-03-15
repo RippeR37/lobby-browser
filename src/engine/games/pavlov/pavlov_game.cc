@@ -832,6 +832,7 @@ void PavlovGame::TryResolvePendingServerLobbyDetailsRequest(bool force) {
           "http://prod.cdn.pavlov-vr.com/avatar/" + member_id + ".png",
           icon_url,
           profile_url,
+          {},
       });
     } else if (pending_search_details_request_->first.wait_for_full_details &&
                !force) {
@@ -846,6 +847,7 @@ void PavlovGame::TryResolvePendingServerLobbyDetailsRequest(bool force) {
           "http://prod.cdn.pavlov-vr.com/avatar/" + member_id + ".png",
           "",
           "",
+          {},
       });
     }
   }

@@ -3,9 +3,12 @@
 #include "base/logging.h"
 #include "wx/bmpbuttn.h"
 #include "wx/checkbox.h"
+#include "wx/clipbrd.h"
+#include "wx/dataobj.h"
 #include "wx/itemattr.h"
 #include "wx/menu.h"
 #include "wx/menuitem.h"
+#include "wx/radiobut.h"
 #include "wx/sizer.h"
 #include "wx/statbox.h"
 #include "wx/stattext.h"
@@ -27,6 +30,8 @@ enum GAME_PAGE_EVENT_IDS {
   ID_Lobby_ContextMenu_ShowDetails = 1001,
   ID_Lobby_ContextMenu_Connect = 1002,
   ID_Lobby_ContextMenu_PIN = 1003,  // noop
+  ID_Lobby_ContextMenu_CopyAddress = 1006,
+  ID_Lobby_ContextMenu_StartGameAndConnect = 1008,
 
   ID_Players_ContextMenu_AddFavorite = 1004,
   ID_Players_ContextMenu_RemoveFavorite = 1005,
@@ -175,6 +180,22 @@ model::GameFilters WxGamePage::GetCurrentGameFilters() const {
     model::GameFilterGroup filter_group;
     filter_group.name = box_sizer->GetStaticBox()->GetLabel();
 
+    // Set group type from model
+    for (const auto& group : game_model_.filter_groups) {
+      if (group.name == filter_group.name) {
+        filter_group.type = group.type;
+        break;
+      }
+    }
+
+    // Set group type from model
+    for (const auto& group : game_model_.filter_groups) {
+      if (group.name == filter_group.name) {
+        filter_group.type = group.type;
+        break;
+      }
+    }
+
     // The grid sizer with checkboxes is the first item
     for (const auto* box_child : box_sizer->GetChildren()) {
       auto* grid_sizer = dynamic_cast<wxGridSizer*>(box_child->GetSizer());
@@ -187,14 +208,23 @@ model::GameFilters WxGamePage::GetCurrentGameFilters() const {
           continue;
         }
 
-        auto* checkbox = dynamic_cast<wxCheckBox*>(grid_item->GetWindow());
-        if (!checkbox) {
+        auto* window = grid_item->GetWindow();
+        bool is_checked = false;
+        std::string label;
+
+        if (auto* checkbox = dynamic_cast<wxCheckBox*>(window)) {
+          is_checked = checkbox->IsChecked();
+          label = checkbox->GetLabel().ToStdString();
+        } else if (auto* radio = dynamic_cast<wxRadioButton*>(window)) {
+          is_checked = radio->GetValue();
+          label = radio->GetLabel().ToStdString();
+        } else {
           continue;
         }
 
         filter_group.filter_options.push_back(model::GameFilterOption{
-            checkbox->GetLabel().ToStdString(),
-            checkbox->IsChecked(),
+            std::move(label),
+            is_checked,
         });
       }
     }
@@ -377,6 +407,12 @@ wxDataViewCtrl* WxGamePage::CreateMainGamePageLobbyListCtrl(
             menu.Append(ID_Lobby_ContextMenu_Connect, "Connect to lobby");
           }
         }
+        if (game_model_.name == "Quake 3") {
+          menu.AppendSeparator();
+          menu.Append(ID_Lobby_ContextMenu_CopyAddress, "Copy " + lobby_id);
+          menu.Append(ID_Lobby_ContextMenu_StartGameAndConnect,
+                      "Start game && connect");
+        }
         if (auto pin = GetLobbyMetadata(lobby_id.ToStdString(), "pin");
             pin && !(*pin).empty() && (*pin) != "EMPTY") {
           menu.AppendSeparator();
@@ -441,18 +477,68 @@ wxPanel* WxGamePage::CreateMainGamePageDetailsFilterPanel(wxWindow* parent) {
     box->Add(box_grid, 1, wxEXPAND | wxALL, 10);
     filters_panel_sizer->Add(box, proportion, wxEXPAND | wxALL, 5);
 
+    bool first_radio = true;
     for (const auto& option : group.filter_options) {
-      auto* checkbox =
-          new wxCheckBox(box->GetStaticBox(), wxID_ANY, option.name);
-
-      checkbox->SetValue(option.enabled);
-      if (option.refresh_on_change) {
-        checkbox->Bind(wxEVT_CHECKBOX, [=, this](const wxCommandEvent&) {
-          RefreshResultsList();
-        });
+      wxControl* ctrl = nullptr;
+      if (group.type == model::GameFilterGroupType::kRadioButton) {
+        auto* radio = new wxRadioButton(
+            box->GetStaticBox(), wxID_ANY, option.name, wxDefaultPosition,
+            wxDefaultSize, first_radio ? wxRB_GROUP : 0);
+        radio->SetValue(option.enabled);
+        ctrl = radio;
+        first_radio = false;
+      } else {
+        auto* checkbox =
+            new wxCheckBox(box->GetStaticBox(), wxID_ANY, option.name);
+        checkbox->SetValue(option.enabled);
+        ctrl = checkbox;
       }
 
-      box_grid->Add(checkbox, 0, wxALL, 5);
+      // Find all other controls in the same grid and disable them if this
+      // one is checked. Only applies to checkboxes, as radio buttons
+      // would become unclickable if disabled by a sibling.
+      auto update_siblings = [ctrl, box_grid, group]() {
+        if (group.type == model::GameFilterGroupType::kRadioButton) {
+          return;
+        }
+
+        bool is_checked = false;
+        if (auto* rb = dynamic_cast<wxRadioButton*>(ctrl)) {
+          is_checked = rb->GetValue();
+        } else if (auto* cb = dynamic_cast<wxCheckBox*>(ctrl)) {
+          is_checked = cb->GetValue();
+        }
+
+        for (auto* item : box_grid->GetChildren()) {
+          auto* child_win = item->GetWindow();
+          if (child_win && child_win != ctrl) {
+            child_win->Enable(!is_checked);
+          }
+        }
+      };
+
+      // Initial state
+      if (option.disables_siblings) {
+        update_siblings();
+      }
+
+      auto on_change = [=, this](wxCommandEvent& evt) {
+        if (option.disables_siblings) {
+          update_siblings();
+        }
+        if (option.refresh_on_change) {
+          RefreshResultsList();
+        }
+        evt.Skip();
+      };
+
+      if (auto* rb = dynamic_cast<wxRadioButton*>(ctrl)) {
+        rb->Bind(wxEVT_RADIOBUTTON, on_change);
+      } else if (auto* cb = dynamic_cast<wxCheckBox*>(ctrl)) {
+        cb->Bind(wxEVT_CHECKBOX, on_change);
+      }
+
+      box_grid->Add(ctrl, 0, wxALL, 5);
     }
   }
 
@@ -650,6 +736,26 @@ void WxGamePage::OnRowContextMenuSelected(wxDataViewItem selected_lobby,
       BringConnectToLobbyDialog(selected_lobby);
       break;
     }
+
+    case ID_Lobby_ContextMenu_CopyAddress: {
+      wxVariant id_variant;
+      results_list_->GetStore()->GetValue(id_variant, selected_lobby, 0);
+      const auto address = id_variant.GetString();
+      if (wxTheClipboard->Open()) {
+        wxTheClipboard->SetData(new wxTextDataObject(address));
+        wxTheClipboard->Close();
+      }
+      break;
+    }
+
+    case ID_Lobby_ContextMenu_StartGameAndConnect: {
+      wxVariant id_variant;
+      results_list_->GetStore()->GetValue(id_variant, selected_lobby, 0);
+      const auto address = id_variant.GetString();
+
+      event_handler_->OnLaunchGame(game_model_.name, address.ToStdString());
+      break;
+    }
   }
 }
 
@@ -812,9 +918,11 @@ void WxGamePage::OnServerLobbyDetailsReceived(
     switch_to_details_tab_ = false;
   }
 
-  auto html_content = WxWebViewMembersHeader(theme_colors_.effective_theme);
+  auto html_content =
+      WxWebViewMembersHeader(theme_colors_.effective_theme, game_model_.name);
   for (const auto& member : details.members) {
-    html_content += WxWebViewMembersMemberRow(member);
+    html_content += WxWebViewMembersMemberRow(theme_colors_.effective_theme,
+                                              member, game_model_.name);
   }
   html_content += WxWebViewMembersFooter();
   details_panel_->SetPage(html_content, "");

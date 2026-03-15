@@ -49,6 +49,7 @@ struct SearchDetailsResponse {
     std::string avatar_url;
     std::string icon_url;
     std::string profile_url;
+    std::vector<std::pair<std::string, std::string>> user_data;
   };
 
   bool all_members_known;

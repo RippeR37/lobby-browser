@@ -108,6 +108,42 @@ void Application::RemovePlayerFromFavorites(std::string game_name,
                                      std::move(player_id));
 }
 
+model::GameConfigDescriptor Application::GetGameConfigDescriptor(
+    std::string game_name) const {
+  return engine_->GetGameConfigDescriptor(std::move(game_name));
+}
+
+void Application::UpdateGameConfigOption(std::string game_name,
+                                         std::string key,
+                                         std::string value) {
+  engine_->UpdateGameConfigOption(std::move(game_name), std::move(key),
+                                  std::move(value));
+}
+
+void Application::AddGameConfigListItem(std::string game_name,
+                                        std::string key,
+                                        std::vector<std::string> fields) {
+  engine_->AddGameConfigListItem(std::move(game_name), std::move(key),
+                                 std::move(fields));
+}
+
+void Application::RemoveGameConfigListItem(std::string game_name,
+                                           std::string key,
+                                           std::string item_id) {
+  engine_->RemoveGameConfigListItem(std::move(game_name), std::move(key),
+                                    std::move(item_id));
+}
+
+void Application::CommitGameConfig(std::string game_name,
+                                   model::GameConfigDescriptor descriptor) {
+  engine_->CommitGameConfig(std::move(game_name), std::move(descriptor));
+}
+
+void Application::OnLaunchGame(std::string game_name,
+                               std::string server_address) {
+  engine_->LaunchGame(std::move(game_name), std::move(server_address));
+}
+
 bool Application::OnExceptionInMainLoop() {
   try {
     throw;  // Rethrow the current exception.

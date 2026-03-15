@@ -39,6 +39,22 @@ class Application : public wxApp, public ui::EventHandler {
   void RemovePlayerFromFavorites(std::string game_name,
                                  std::string player_id) override;
 
+  model::GameConfigDescriptor GetGameConfigDescriptor(
+      std::string game_name) const override;
+  void UpdateGameConfigOption(std::string game_name,
+                              std::string key,
+                              std::string value) override;
+  void AddGameConfigListItem(std::string game_name,
+                             std::string key,
+                             std::vector<std::string> fields) override;
+  void RemoveGameConfigListItem(std::string game_name,
+                                std::string key,
+                                std::string item_id) override;
+  void CommitGameConfig(std::string game_name,
+                        model::GameConfigDescriptor descriptor) override;
+
+  void OnLaunchGame(std::string game_name, std::string server_address) override;
+
  private:
   // wxApp
   bool OnExceptionInMainLoop() override;

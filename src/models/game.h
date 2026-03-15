@@ -20,11 +20,18 @@ struct GameFilterOption {
   std::string name;
   bool enabled;
   bool refresh_on_change = false;
+  bool disables_siblings = false;
+};
+
+enum class GameFilterGroupType {
+  kCheckbox,
+  kRadioButton,
 };
 
 struct GameFilterGroup {
   std::string name;
   std::vector<GameFilterOption> filter_options;
+  GameFilterGroupType type = GameFilterGroupType::kCheckbox;
 };
 
 enum class GameResultsColumnOrdering {

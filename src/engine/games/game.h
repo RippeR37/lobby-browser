@@ -3,6 +3,7 @@
 #include "base/callback.h"
 #include "nlohmann/json.hpp"
 
+#include "models/game_config.h"
 #include "models/search.h"
 
 namespace engine::game {
@@ -26,6 +27,16 @@ class Game {
   virtual bool IsPlayerInFavorites(std::string player_id) const = 0;
   virtual void AddPlayerToFavorites(std::string player_id) = 0;
   virtual void RemovePlayerFromFavorites(std::string player_id) = 0;
+
+  virtual model::GameConfigDescriptor GetConfigDescriptor() const = 0;
+  virtual void UpdateConfigOption(std::string key, std::string value) = 0;
+  virtual void AddConfigListItem(std::string key,
+                                 std::vector<std::string> fields) = 0;
+  virtual void RemoveConfigListItem(std::string key, std::string item_id) = 0;
+  // Returns true if needs reinitialization
+  virtual bool CommitConfig(model::GameConfigDescriptor descriptor) = 0;
+
+  virtual void LaunchGame(std::string server_address) = 0;
 };
 
 }  // namespace engine::game

@@ -48,7 +48,10 @@ class WxMainWindow : public wxFrame, public WxTrayIcon::Client {
   void RefreshResultsForCurrentGame();
   void ConnectToCurrentlySelectedLobby();
 
+  void UpdateMenus();
+
  private:
+  void CreateMenus();
   void UpdateConfig();
   void OnGameChanging(wxBookCtrlEvent& event);
   void OnGameChanged(wxBookCtrlEvent& event);

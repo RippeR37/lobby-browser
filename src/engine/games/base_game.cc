@@ -21,7 +21,35 @@ void BaseGame::AddPlayerToFavorites(std::string player_id) {
 
 void BaseGame::RemovePlayerFromFavorites(std::string player_id) {
   (void)player_id;
-  return;
+}
+
+model::GameConfigDescriptor BaseGame::GetConfigDescriptor() const {
+  return {};
+}
+
+void BaseGame::UpdateConfigOption(std::string key, std::string value) {
+  (void)key;
+  (void)value;
+}
+
+void BaseGame::AddConfigListItem(std::string key,
+                                 std::vector<std::string> fields) {
+  (void)key;
+  (void)fields;
+}
+
+void BaseGame::RemoveConfigListItem(std::string key, std::string item_id) {
+  (void)key;
+  (void)item_id;
+}
+
+bool BaseGame::CommitConfig(model::GameConfigDescriptor descriptor) {
+  (void)descriptor;
+  return false;
+}
+
+void BaseGame::LaunchGame(std::string server_address) {
+  (void)server_address;
 }
 
 void BaseGame::SetStatusText(std::string status_text) {

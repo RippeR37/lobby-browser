@@ -3,5 +3,6 @@ IDI_ICON_SEARCHING    ICON    "app_searching.ico"
 
 IDI_ICON_PAVLOV         RCDATA      "pavlov.png"
 IDI_ICON_CONTRACTORS    RCDATA      "contractors.png"
+IDI_ICON_QUAKE3         RCDATA      "quake3.png"
 
 #include <wx/msw/wx.rc>

@@ -4,7 +4,10 @@
 
 namespace ui::wx {
 
-std::string WxWebViewMembersHeader(UiEffectiveTheme theme) {
+std::string WxWebViewMembersHeader(UiEffectiveTheme theme,
+                                   const std::string& game_name) {
+  (void)game_name;
+
   std::string result = R"(
 <!DOCTYPE html>
 <html lang='en'>
@@ -26,7 +29,7 @@ std::string WxWebViewMembersHeader(UiEffectiveTheme theme) {
 </head>
 
 <body style='margin: 0px;'>
-  <table width='300'>
+  <table width='100%'>
 
 )";
 
@@ -50,7 +53,51 @@ std::string WxWebViewMembersHeader(UiEffectiveTheme theme) {
 }
 
 std::string WxWebViewMembersMemberRow(
-    const model::SearchDetailsResponse::Member& member) {
+    UiEffectiveTheme theme,
+    const model::SearchDetailsResponse::Member& member,
+    const std::string& game_name) {
+  if (game_name == "Quake 3") {
+    std::string score = "0";
+    std::string ping = "0";
+    bool is_bot = false;
+
+    for (const auto& data : member.user_data) {
+      if (data.first == "Score")
+        score = data.second;
+      else if (data.first == "Ping")
+        ping = data.second;
+      else if (data.first == "IsBot")
+        is_bot = (data.second == "true");
+    }
+
+    std::string result = R"(
+    <tr style='border-bottom: 1px solid #444;'>
+      <td style='padding-left:10px; padding-top: 5px;' valign='top'>
+        <span style='font-size:16px; font-weight:bold; color: $NAMECOLOR;'>$USERNAME</span><br>
+        <span style='font-size:11px; color: #888;'>Ping: $PING ms</span>
+      </td>
+      <td align='right' valign='middle' style='padding-right: 10px;'>
+        <span style='font-size:20px; font-weight:bold; font-family: monospace; color: #f90;'>$SCORE</span>
+      </td>
+    </tr>
+)";
+
+    util::ReplaceAll(result, "$USERNAME", member.name);
+    util::ReplaceAll(result, "$SCORE", score);
+    util::ReplaceAll(result, "$PING", ping);
+    switch (theme) {
+      case UiEffectiveTheme::Light:
+        util::ReplaceAll(result, "$NAMECOLOR", is_bot ? "#666" : "#000");
+        break;
+      case UiEffectiveTheme::Dark:
+        util::ReplaceAll(result, "$NAMECOLOR", is_bot ? "#aaa" : "#fff");
+        break;
+    }
+
+    return result;
+  }
+
+  // Default (Pavlov) template
   std::string result = R"(
     <tr>
       <td width='48'>

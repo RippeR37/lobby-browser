@@ -125,6 +125,8 @@ target_sources(lobby_browser
     src/engine/backends/pavlov/pavlov_data.h
     src/engine/backends/pavlov/pavlov_lobby_backend.cc
     src/engine/backends/pavlov/pavlov_lobby_backend.h
+    src/engine/backends/quake3/quake3_master_backend.cc
+    src/engine/backends/quake3/quake3_master_backend.h
     src/engine/backends/steam/steam_auth_backend.cc
     src/engine/backends/steam/steam_auth_backend.h
     src/engine/backends/steam/steam_in_process_auth_backend.cc
@@ -151,6 +153,10 @@ target_sources(lobby_browser
     src/engine/games/pavlov/pavlov_game.h
     src/engine/games/pavlov/pavlov_players_data_store.cc
     src/engine/games/pavlov/pavlov_players_data_store.h
+    src/engine/games/quake3/quake3_data.cc
+    src/engine/games/quake3/quake3_data.h
+    src/engine/games/quake3/quake3_game.cc
+    src/engine/games/quake3/quake3_game.h
     src/engine/presenter.h
     src/main.cc
     src/models/auth.h
@@ -167,6 +173,8 @@ target_sources(lobby_browser
     src/ui/presenter.h
     src/ui/wx/wx_auto_search_dialog.cc
     src/ui/wx/wx_auto_search_dialog.h
+    src/ui/wx/wx_game_config_dialog.cc
+    src/ui/wx/wx_game_config_dialog.h
     src/ui/wx/wx_game_page.cc
     src/ui/wx/wx_game_page.h
     src/ui/wx/wx_lobby_connect_dialog.cc

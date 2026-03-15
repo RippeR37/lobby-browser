@@ -20,6 +20,15 @@ class BaseGame : public Game {
   void AddPlayerToFavorites(std::string player_id) override;
   void RemovePlayerFromFavorites(std::string player_id) override;
 
+  model::GameConfigDescriptor GetConfigDescriptor() const override;
+  void UpdateConfigOption(std::string key, std::string value) override;
+  void AddConfigListItem(std::string key,
+                         std::vector<std::string> fields) override;
+  void RemoveConfigListItem(std::string key, std::string item_id) override;
+  bool CommitConfig(model::GameConfigDescriptor descriptor) override;
+
+  void LaunchGame(std::string server_address) override;
+
  protected:
   void SetStatusText(std::string);
   void ReportMessage(Presenter::MessageType type,

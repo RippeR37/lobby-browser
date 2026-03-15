@@ -6,6 +6,7 @@
 #include "base/callback.h"
 
 #include "models/config.h"
+#include "models/game_config.h"
 #include "models/search.h"
 
 namespace ui {
@@ -41,6 +42,23 @@ class EventHandler {
                                     std::string player_id) = 0;
   virtual void RemovePlayerFromFavorites(std::string game_name,
                                          std::string player_id) = 0;
+
+  virtual model::GameConfigDescriptor GetGameConfigDescriptor(
+      std::string game_name) const = 0;
+  virtual void UpdateGameConfigOption(std::string game_name,
+                                      std::string key,
+                                      std::string value) = 0;
+  virtual void AddGameConfigListItem(std::string game_name,
+                                     std::string key,
+                                     std::vector<std::string> fields) = 0;
+  virtual void RemoveGameConfigListItem(std::string game_name,
+                                        std::string key,
+                                        std::string item_id) = 0;
+  virtual void CommitGameConfig(std::string game_name,
+                                model::GameConfigDescriptor descriptor) = 0;
+
+  virtual void OnLaunchGame(std::string game_name,
+                            std::string server_address) = 0;
 };
 
 }  // namespace ui
