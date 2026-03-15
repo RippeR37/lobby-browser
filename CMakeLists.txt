@@ -12,7 +12,7 @@ endif()
 ###
 
 cmake_minimum_required(VERSION 3.13)
-project(lobby_browser VERSION 1.1.1 LANGUAGES CXX)
+project(lobby_browser VERSION 1.2 LANGUAGES CXX)
 
 
 ###

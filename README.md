@@ -14,11 +14,13 @@ VR games).
   owning the game on Steam)
 * [Contractors](https://www.contractorsvr.com/home-1) (lobbies, requires
   owning the game on Steam)
+* [Quake 3](https://store.steampowered.com/app/2200/Quake_III_Arena/) (servers,
+  players, custom master server lists)
 
 ### Features
 
 * Browse lobbies/servers and list of active players
-* Check in-lobby players
+* Check in-lobby/in-server players
 * Search for players
 * Mark players as favorites (in-app system)
 * Automatically connect to a lobby
@@ -42,6 +44,7 @@ VR games).
     * Pavlov custom backend APIs
   * Nakoma
   * Mod.io
+  * Quake 3 Master Servers
 
 ## How to use
 
